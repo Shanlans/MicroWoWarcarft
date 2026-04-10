@@ -202,6 +202,13 @@
       return;
     }
 
+    // Map toggle
+    if (Input.isPressed('m')) UI.toggleMap();
+    if (UI.isMapOpen()) {
+      if (Input.mouse.clicked || Input.isPressed('escape')) UI.toggleMap();
+      return;
+    }
+
     // Esc: save and return to menu
     if (Input.isPressed('escape')) {
       Save.save(game);

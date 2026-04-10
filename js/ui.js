@@ -1,13 +1,15 @@
-// ui.js - HUD: hp/mp/xp bars, skill hotbar, target frame, toast
+// ui.js - HUD: hp/mp/xp bars, skill hotbar, target frame, toast, minimap
 const UI = (() => {
-  const toasts = []; // { text, color, t }
-  let hotbarRects = []; // {x,y,w,h,index} - filled by draw(), read by main.js
+  const toasts = [];
+  let hotbarRects = [];
+  let mapOpen = false;
 
   function toast(text, color = '#ffe040') {
     toasts.push({ text, color, t: 0 });
   }
-
   function getHotbarRects() { return hotbarRects; }
+  function toggleMap() { mapOpen = !mapOpen; }
+  function isMapOpen() { return mapOpen; }
 
   function update(dt) {
     for (let i = toasts.length - 1; i >= 0; i--) {
@@ -152,8 +154,94 @@ const UI = (() => {
       ctx.globalAlpha = 1;
     }
 
+    // ---- Minimap (M key or button) ----
+    if (mapOpen) drawMap(ctx, game);
+
     // ---- Mobile touch controls ----
     if (Input.isMobile) drawMobileControls(ctx, game);
+  }
+
+  // ---- Full-screen map overlay ----
+  function drawMap(ctx, game) {
+    const W = 960, H = 640;
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
+    ctx.fillRect(0, 0, W, H);
+
+    const map = game.world.map;
+    const scale = Math.min((W - 80) / map.w, (H - 100) / map.h);
+    const ox = (W - map.w * scale) / 2;
+    const oy = 50 + (H - 100 - map.h * scale) / 2;
+
+    // tile colors
+    const tileColors = { G: '#3b7a2e', D: '#6b4a28', P: '#5a3a1a', S: '#666', W: '#2a4a8a', T: '#1a4a1a', R: '#8a2a2a' };
+
+    // draw tiles
+    for (let y = 0; y < map.h; y++) {
+      for (let x = 0; x < map.w; x++) {
+        const c = map.data[y][x];
+        ctx.fillStyle = tileColors[c] || '#222';
+        ctx.fillRect(ox + x * scale, oy + y * scale, Math.ceil(scale), Math.ceil(scale));
+      }
+    }
+
+    // draw enemies as red dots
+    for (const e of game.world.enemies) {
+      if (e.dead) continue;
+      const ex = ox + (e.x + e.w / 2) / TILE * scale;
+      const ey = oy + (e.y + e.h / 2) / TILE * scale;
+      ctx.fillStyle = e.template.boss ? '#ff40ff' : '#ff4040';
+      const sz = e.template.boss ? 5 : 3;
+      ctx.fillRect(ex - sz, ey - sz, sz * 2, sz * 2);
+    }
+
+    // draw NPCs as blue dots
+    for (const n of game.world.npcs) {
+      const nx = ox + (n.x + n.w / 2) / TILE * scale;
+      const ny = oy + (n.y + n.h / 2) / TILE * scale;
+      ctx.fillStyle = '#40c0ff';
+      ctx.fillRect(nx - 3, ny - 3, 6, 6);
+    }
+
+    // draw transitions as purple markers
+    for (const t of game.world.transitions) {
+      const tx = ox + (t.x + t.w / 2) / TILE * scale;
+      const ty = oy + (t.y + t.h / 2) / TILE * scale;
+      ctx.fillStyle = t.to === 'deadmines' ? '#c060ff' : '#ffe040';
+      ctx.fillRect(tx - 4, ty - 4, 8, 8);
+      // label
+      ctx.font = '10px monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      const labels = { deadmines: '副本入口', westfall: '→西部荒野', elwynn: '→艾尔文森林' };
+      ctx.fillText(labels[t.to] || t.to, tx, ty - 8);
+    }
+
+    // draw player as bright green arrow
+    const p = game.player;
+    const px = ox + (p.x + p.w / 2) / TILE * scale;
+    const py = oy + (p.y + p.h / 2) / TILE * scale;
+    ctx.fillStyle = '#40ff40';
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(px, py, 6, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // title
+    const zoneNames = { elwynn: '艾尔文森林', westfall: '西部荒野', deadmines: '死亡矿井' };
+    ctx.fillStyle = '#ffe040'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('地图 - ' + (zoneNames[game.world.zone] || game.world.zone), W / 2, 32);
+
+    // legend
+    ctx.font = '11px monospace'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#40ff40'; ctx.fillText('● 你', 30, H - 20);
+    ctx.fillStyle = '#ff4040'; ctx.fillText('■ 敌人', 80, H - 20);
+    ctx.fillStyle = '#40c0ff'; ctx.fillText('■ NPC', 150, H - 20);
+    ctx.fillStyle = '#c060ff'; ctx.fillText('■ 副本', 210, H - 20);
+    ctx.fillStyle = '#ffe040'; ctx.fillText('■ 传送', 280, H - 20);
+    ctx.fillStyle = '#8a8a8a'; ctx.fillText('按 M 或点击关闭', W - 170, H - 20);
   }
 
   function drawMobileControls(ctx, game) {
@@ -226,10 +314,14 @@ const UI = (() => {
     drawCircle(80, 460, 20, '#2a4a6a', '任务');
     Input.touchBtns.push({ x: 80, y: 460, r: 24, key: 'l' });
 
+    // Map
+    drawCircle(140, 460, 20, '#3a4a3a', '地图');
+    Input.touchBtns.push({ x: 140, y: 460, r: 24, key: 'm' });
+
     // Esc (save & menu)
-    drawCircle(140, 460, 20, '#5a2a2a', '菜单');
-    Input.touchBtns.push({ x: 140, y: 460, r: 24, key: 'escape' });
+    drawCircle(200, 460, 20, '#5a2a2a', '菜单');
+    Input.touchBtns.push({ x: 200, y: 460, r: 24, key: 'escape' });
   }
 
-  return { draw, toast, update, getHotbarRects };
+  return { draw, toast, update, getHotbarRects, toggleMap, isMapOpen };
 })();
