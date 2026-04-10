@@ -357,7 +357,7 @@ function buildWestfall(world, player) {
   // Dungeon guide NPC outside the entrance
   world.npcs.push(NPC.create('dungeonGuide', 19 * TILE, 16 * TILE));
 
-  player.x = 2 * TILE; player.y = 23 * TILE;
+  player.x = 5 * TILE; player.y = 23 * TILE;
 }
 
 function buildDeadmines(world, player) {
