@@ -181,43 +181,55 @@ class World {
       ctx.fillStyle = '#ffe040';
       ctx.fillRect(px - 4, py - 4, 8, 8);
     }
-    // dungeon portal glow on transitions
+    // dungeon portal beacon (visible from far away, through walls)
     for (const t of this.transitions) {
       if (t.to === 'deadmines') {
-        const px = t.x - cam.x, py = t.y - cam.y;
+        const cx = t.x + t.w / 2 - cam.x;
+        const py = t.y - cam.y;
         const time = performance.now() / 1000;
-        const pulse = 0.25 + Math.sin(time * 2.5) * 0.12;
+        const pulse = 0.3 + Math.sin(time * 2.5) * 0.15;
         ctx.save();
-        // purple portal glow
+        // tall purple beacon column (extends 300px above portal)
+        const beaconH = 300;
+        const grad = ctx.createLinearGradient(cx, py - beaconH, cx, py + t.h);
+        grad.addColorStop(0, 'rgba(128,48,208,0)');
+        grad.addColorStop(0.5, 'rgba(160,80,255,' + (pulse * 0.6) + ')');
+        grad.addColorStop(1, 'rgba(200,120,255,' + pulse + ')');
+        ctx.fillStyle = grad;
+        ctx.fillRect(cx - 8, py - beaconH, 16, beaconH + t.h);
+        // bright center line
         ctx.globalAlpha = pulse;
-        ctx.fillStyle = '#8030d0';
-        ctx.fillRect(px, py, t.w, t.h);
-        // inner bright
+        ctx.fillStyle = '#e0b0ff';
+        ctx.fillRect(cx - 2, py - beaconH, 4, beaconH + t.h);
+        // portal glow at base
         ctx.globalAlpha = pulse * 0.8;
-        ctx.fillStyle = '#c060ff';
-        ctx.fillRect(px + 4, py + 4, t.w - 8, t.h - 8);
-        // swirling particles
-        for (let i = 0; i < 6; i++) {
-          const a = time * 2 + i * Math.PI / 3;
-          const r = 16 + Math.sin(time * 3 + i) * 8;
-          const ppx = px + t.w / 2 + Math.cos(a) * r;
-          const ppy = py + t.h / 2 + Math.sin(a) * r;
-          ctx.globalAlpha = pulse * 1.2;
+        ctx.fillStyle = '#a050e0';
+        ctx.fillRect(cx - t.w / 2, py, t.w, t.h);
+        ctx.fillStyle = '#d090ff';
+        ctx.fillRect(cx - t.w / 2 + 4, py + 4, t.w - 8, t.h - 8);
+        // swirling particles around beacon
+        for (let i = 0; i < 8; i++) {
+          const a = time * 1.5 + i * Math.PI / 4;
+          const ry = py - 40 - i * 30;
+          const rx = cx + Math.sin(a) * 14;
+          ctx.globalAlpha = pulse * 0.9;
           ctx.fillStyle = '#e0a0ff';
-          ctx.fillRect(ppx - 2, ppy - 2, 4, 4);
+          ctx.fillRect(rx - 3, ry - 3, 6, 6);
         }
         ctx.restore();
-        // label
+        // labels (high above building so visible from outside)
         ctx.save();
-        ctx.font = 'bold 12px monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#000';
-        ctx.fillText('副本入口', px + t.w / 2 + 1, py - 6);
-        ctx.fillStyle = '#c080ff';
-        ctx.fillText('副本入口', px + t.w / 2, py - 7);
-        ctx.fillStyle = '#8a6aaa';
-        ctx.font = '10px monospace';
-        ctx.fillText('死亡矿井', px + t.w / 2, py - 18);
+        ctx.font = 'bold 16px monospace';
+        ctx.fillText('死亡矿井', cx + 1, py - 120);
+        ctx.fillStyle = '#d090ff';
+        ctx.fillText('死亡矿井', cx, py - 121);
+        ctx.font = 'bold 13px monospace';
+        ctx.fillStyle = '#000';
+        ctx.fillText('▼ 副本入口 ▼', cx + 1, py - 100);
+        ctx.fillStyle = '#ffe040';
+        ctx.fillText('▼ 副本入口 ▼', cx, py - 101);
         ctx.restore();
       }
     }
