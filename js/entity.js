@@ -13,6 +13,7 @@ class Entity {
     this.dead = false;
     this.dots = [];
     this.slowUntil = 0;
+    this.damageFlash = 0;
   }
   center() { return { x: this.x + this.w / 2, y: this.y + this.h / 2 }; }
   distTo(other) {
@@ -23,6 +24,7 @@ class Entity {
   takeDamage(dmg, from) {
     if (this.dead) return;
     this.hp -= dmg;
+    this.damageFlash = 0.15;
     if (this.hp <= 0) {
       this.hp = 0;
       this.dead = true;
@@ -56,5 +58,6 @@ class Entity {
     } else {
       this.animStep = 0; this.animT = 0;
     }
+    if (this.damageFlash > 0) this.damageFlash = Math.max(0, this.damageFlash - dt);
   }
 }

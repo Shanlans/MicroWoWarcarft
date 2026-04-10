@@ -12,7 +12,7 @@ const UI = (() => {
   function update(dt) {
     for (let i = toasts.length - 1; i >= 0; i--) {
       toasts[i].t += dt;
-      if (toasts[i].t > 3) toasts.splice(i, 1);
+      if (toasts[i].t > 4.5) toasts.splice(i, 1);
     }
   }
 
@@ -96,6 +96,31 @@ const UI = (() => {
     ctx.fillStyle = '#ffe040'; ctx.font = 'bold 16px monospace'; ctx.textAlign = 'center';
     const zoneName = game.world.zone === 'elwynn' ? '艾尔文森林' : '西部荒野';
     ctx.fillText(zoneName, 480, 28);
+
+    // active quest tracker (right side, below target frame)
+    const active = Object.keys(p.questState).filter(k => p.questState[k].status === 'active');
+    if (active.length > 0) {
+      const tx = 700, ty = 110;
+      const rows = active.slice(0, 3);
+      const h = 18 + rows.length * 38;
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(tx, ty, 250, h);
+      ctx.strokeStyle = '#a07030'; ctx.strokeRect(tx, ty, 250, h);
+      ctx.fillStyle = '#ffe040'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'left';
+      ctx.fillText('当前任务 (L 查看)', tx + 8, ty + 14);
+      let yy = ty + 30;
+      for (const qid of rows) {
+        const q = Quests.DB[qid];
+        if (!q) continue;
+        const turnin = Quests.canTurnIn(q, p);
+        ctx.fillStyle = turnin ? '#80ff80' : '#f0e4c8'; ctx.font = '12px monospace';
+        ctx.fillText('• ' + q.title, tx + 8, yy);
+        ctx.fillStyle = turnin ? '#80ff80' : '#a0c0ff'; ctx.font = '10px monospace';
+        const prog = Quests.progressText(q, p).split('\n')[0] || '';
+        ctx.fillText('  ' + (turnin ? '可交付' : prog), tx + 8, yy + 14);
+        yy += 30;
+      }
+    }
 
     // toasts
     ctx.textAlign = 'center';

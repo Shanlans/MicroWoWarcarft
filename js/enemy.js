@@ -108,7 +108,17 @@ class Enemy extends Entity {
   }
   draw(ctx, cam) {
     const img = Assets.get(this.template.sprite);
-    ctx.drawImage(img, Math.round(this.x - cam.x), Math.round(this.y - cam.y));
+    const dx = Math.round(this.x - cam.x), dy = Math.round(this.y - cam.y);
+    ctx.drawImage(img, dx, dy);
+    if (this.damageFlash > 0) {
+      // flash overlay: brighten sprite with "lighter" blend
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.7 * (this.damageFlash / 0.15);
+      ctx.drawImage(img, dx, dy);
+      ctx.drawImage(img, dx, dy);
+      ctx.restore();
+    }
     // hp bar
     const x = Math.round(this.x - cam.x);
     const y = Math.round(this.y - cam.y - 8);

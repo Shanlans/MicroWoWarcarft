@@ -83,11 +83,15 @@ class Player extends Entity {
     this.recomputeStats();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
-    // unlock skill at level 5/10
-    const order = Skills.CLASS_ORDER[this.cls];
-    if (this.level >= 5 && !this.skills.includes(order[1])) this.skills.push(order[1]);
-    if (this.level >= 10 && !this.skills.includes(order[2])) this.skills.push(order[2]);
     Combat.pushFloat(this.x + this.w / 2, this.y - 26, '升级! Lv.' + this.level, '#ffe040', 18);
+    // prompt to visit trainer for new skills
+    const order = Skills.CLASS_ORDER[this.cls];
+    if (this.level === 5 && !this.skills.includes(order[1])) {
+      UI.toast('可以在训练师处学习新技能', '#ffe040');
+    }
+    if (this.level === 10 && !this.skills.includes(order[2])) {
+      UI.toast('可以在训练师处学习新技能', '#ffe040');
+    }
   }
   update(dt, world) {
     if (this.dead) return;
