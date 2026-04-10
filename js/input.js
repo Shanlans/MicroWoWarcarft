@@ -7,8 +7,8 @@ const Input = (() => {
   // ---- Mobile detection & touch state ----
   let isMobile = false;
   const joystick = { active: false, cx: 0, cy: 0, dx: 0, dy: 0, touchId: null };
-  const touchBtns = []; // populated by UI, format: {x, y, r, key}
-  let touchTapPos = null; // {x, y} for target-tap
+  const touchBtns = []; // populated by UI: {x, y, r, action}
+  const pendingActions = []; // callbacks to run next frame
 
   function normalize(k) {
     if (k === 'ArrowUp') return 'w';
@@ -52,18 +52,17 @@ const Input = (() => {
       isMobile = true;
       for (const t of e.changedTouches) {
         const p = toCanvas(t);
-        // check virtual buttons first
+        // check virtual buttons first (use action callbacks)
         let hitBtn = false;
         for (const b of touchBtns) {
-          if (Math.hypot(p.x - b.x, p.y - b.y) < b.r + 6) {
-            pressed[b.key] = true;
-            keys[b.key] = true;
+          if (Math.hypot(p.x - b.x, p.y - b.y) < b.r + 10) {
+            if (b.action) pendingActions.push(b.action);
             hitBtn = true;
             break;
           }
         }
         if (hitBtn) continue;
-        // left 35% = joystick zone
+        // left 35% bottom 60% = joystick zone
         if (p.x < 960 * 0.35 && p.y > 640 * 0.4 && !joystick.active) {
           joystick.active = true;
           joystick.cx = p.x;
@@ -115,11 +114,9 @@ const Input = (() => {
     canvas.addEventListener('touchcancel', touchEnd);
   }
 
-  // isDown override for touch joystick
   function isDown(k) {
     const nk = normalize(k);
     if (keys[nk]) return true;
-    // map joystick to WASD
     if (joystick.active) {
       if (nk === 'w' && joystick.dy < -0.3) return true;
       if (nk === 's' && joystick.dy > 0.3) return true;
@@ -135,15 +132,17 @@ const Input = (() => {
     return false;
   }
 
+  function flushActions() {
+    const copy = pendingActions.splice(0);
+    for (const fn of copy) fn();
+  }
+
   return {
     attachMouse, isDown, isPressed, mouse,
     get isMobile() { return isMobile; },
     joystick,
-    touchBtns, // UI populates this
-    endFrame() {
-      mouse.clicked = false;
-      // clear edge-triggered virtual keys
-      for (const b of touchBtns) keys[b.key] = false;
-    },
+    touchBtns,
+    flushActions,
+    endFrame() { mouse.clicked = false; },
   };
 })();

@@ -147,9 +147,11 @@
   function pickTarget(x, y) {
     const wx = x + Camera.x, wy = y + Camera.y;
     let best = null, bestD = 9999;
+    // on mobile, expand hitbox by 16px for easier tapping
+    const pad = Input.isMobile ? 16 : 0;
     for (const e of game.world.enemies) {
       if (e.dead) continue;
-      if (wx >= e.x && wx < e.x + e.w && wy >= e.y && wy < e.y + e.h) {
+      if (wx >= e.x - pad && wx < e.x + e.w + pad && wy >= e.y - pad && wy < e.y + e.h + pad) {
         const d = (wx - (e.x + e.w/2))**2 + (wy - (e.y + e.h/2))**2;
         if (d < bestD) { bestD = d; best = e; }
       }
@@ -158,8 +160,9 @@
   }
   function pickNPC(x, y) {
     const wx = x + Camera.x, wy = y + Camera.y;
+    const pad = Input.isMobile ? 20 : 6;
     for (const n of game.world.npcs) {
-      if (wx >= n.x - 6 && wx < n.x + n.w + 6 && wy >= n.y && wy < n.y + n.h + 6) return n;
+      if (wx >= n.x - pad && wx < n.x + n.w + pad && wy >= n.y - pad && wy < n.y + n.h + pad) return n;
     }
     return null;
   }
@@ -178,6 +181,8 @@
 
   // --- Playing update ---
   function updatePlaying(dt) {
+    // flush mobile touch button callbacks
+    Input.flushActions();
     // UI overlays first
     InventoryUI.update(game);
     Quests.updateLog();

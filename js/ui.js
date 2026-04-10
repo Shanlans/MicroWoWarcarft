@@ -178,89 +178,78 @@ const UI = (() => {
     }
     ctx.restore();
 
-    // Skill buttons (right side) + Tab + B/L
+    // Rebuild touch buttons with action callbacks
     Input.touchBtns.length = 0;
     const btnR = 30;
     const skills = p.skills || [];
-    // skill 1-3 in a row
+
+    function drawCircle(cx, cy, r, col, label) {
+      ctx.save(); ctx.globalAlpha = 0.7;
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(cx, cy, r + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#fff'; ctx.font = `bold ${r < 26 ? 10 : 11}px monospace`; ctx.textAlign = 'center';
+      ctx.fillText(label, cx, cy + 4);
+      ctx.restore();
+    }
+
+    // Skill 1-3
     for (let i = 0; i < Math.min(3, skills.length); i++) {
       const bx = 760 + i * 70, by = 530;
       const sk = Skills.get(skills[i]);
       const cd = p.cooldowns[skills[i]] || 0;
       const col = cd > 0 ? '#4a3a2a' : (sk.cls === 'warrior' ? '#c04040' : sk.cls === 'mage' ? '#4060d0' : '#40a040');
-      ctx.save();
-      ctx.globalAlpha = 0.7;
-      ctx.fillStyle = '#000';
-      ctx.beginPath(); ctx.arc(bx, by, btnR + 2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(bx, by, btnR, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-      if (cd > 0) {
-        ctx.fillText(cd.toFixed(1), bx, by + 4);
-      } else {
-        ctx.fillText(sk.name.slice(0, 2), bx, by + 4);
-      }
-      ctx.restore();
-      Input.touchBtns.push({ x: bx, y: by, r: btnR, key: (i + 1).toString() });
+      drawCircle(bx, by, btnR, col, cd > 0 ? cd.toFixed(1) : sk.name.slice(0, 2));
+      const idx = i;
+      Input.touchBtns.push({ x: bx, y: by, r: btnR, action() { p.useSkill(idx, game.world); } });
     }
-    // skill 4-5 above row
+    // Skill 4-5
     for (let i = 3; i < Math.min(5, skills.length); i++) {
       const bx = 795 + (i - 3) * 70, by = 460;
       const sk = Skills.get(skills[i]);
       const cd = p.cooldowns[skills[i]] || 0;
-      const col = cd > 0 ? '#4a3a2a' : '#6a5a2a';
-      ctx.save();
-      ctx.globalAlpha = 0.7;
-      ctx.fillStyle = '#000';
-      ctx.beginPath(); ctx.arc(bx, by, 24, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(bx, by, 22, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
-      ctx.fillText(cd > 0 ? cd.toFixed(1) : sk.name.slice(0, 2), bx, by + 3);
-      ctx.restore();
-      Input.touchBtns.push({ x: bx, y: by, r: 24, key: (i + 1).toString() });
+      drawCircle(bx, by, 22, cd > 0 ? '#4a3a2a' : '#6a5a2a', cd > 0 ? cd.toFixed(1) : sk.name.slice(0, 2));
+      const idx = i;
+      Input.touchBtns.push({ x: bx, y: by, r: 24, action() { p.useSkill(idx, game.world); } });
     }
 
-    // Tab (target nearest) button
+    // Tab (select nearest enemy)
     const tabX = 680, tabY = 530;
-    ctx.save(); ctx.globalAlpha = 0.6;
-    ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.arc(tabX, tabY, 24, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#4a6a8a';
-    ctx.beginPath(); ctx.arc(tabX, tabY, 22, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('选敌', tabX, tabY + 4);
-    ctx.restore();
-    Input.touchBtns.push({ x: tabX, y: tabY, r: 24, key: 'tab' });
+    drawCircle(tabX, tabY, 24, '#4a6a8a', '选敌');
+    Input.touchBtns.push({ x: tabX, y: tabY, r: 28, action() {
+      let best = null, bestD = 9999;
+      const pc = p.center();
+      for (const e of game.world.enemies) {
+        if (e.dead) continue;
+        const c = e.center();
+        const d = Math.hypot(c.x - pc.x, c.y - pc.y);
+        if (d < bestD) { bestD = d; best = e; }
+      }
+      if (best) {
+        if (best !== p.target) p.autoAttacking = false;
+        p.target = best;
+        UI.toast(`目标: [${best.level}] ${best.name}`, '#ffe040');
+      } else {
+        UI.toast('附近没有敌人', '#8a8a8a');
+      }
+    }});
 
-    // B (bag) button
-    const bagX = 30, bagY = 460;
-    ctx.save(); ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.arc(bagX, bagY, 20, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#6a5a2a';
-    ctx.beginPath(); ctx.arc(bagX, bagY, 18, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('背包', bagX, bagY + 4);
-    ctx.restore();
-    Input.touchBtns.push({ x: bagX, y: bagY, r: 20, key: 'b' });
+    // Bag
+    drawCircle(30, 460, 20, '#6a5a2a', '背包');
+    Input.touchBtns.push({ x: 30, y: 460, r: 24, action() { InventoryUI.toggle(); } });
 
-    // L (quest log) button
-    const logX = 80, logY = 460;
-    ctx.save(); ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.arc(logX, logY, 20, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#2a4a6a';
-    ctx.beginPath(); ctx.arc(logX, logY, 18, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('任务', logX, logY + 4);
-    ctx.restore();
-    Input.touchBtns.push({ x: logX, y: logY, r: 20, key: 'l' });
+    // Quest log
+    drawCircle(80, 460, 20, '#2a4a6a', '任务');
+    Input.touchBtns.push({ x: 80, y: 460, r: 24, action() { Quests.toggleLog(); } });
+
+    // Esc (save & menu)
+    drawCircle(140, 460, 20, '#5a2a2a', '菜单');
+    Input.touchBtns.push({ x: 140, y: 460, r: 24, action() {
+      if (typeof Save !== 'undefined') Save.save(game);
+      game.state = 'menu';
+    }});
   }
 
   return { draw, toast, update, getHotbarRects };
