@@ -94,12 +94,23 @@ const InventoryUI = (() => {
       const it = p.inventory[i];
       if (it) {
         const def = Items.get(it.id);
-        ctx.fillStyle = Items.color(def);
-        ctx.fillRect(cx + 12, cy + 12, slot - 24, slot - 24);
-        ctx.fillStyle = '#000'; ctx.font = '10px monospace'; ctx.textAlign = 'right';
-        if (it.count > 1) ctx.fillText(it.count, cx + slot - 4, cy + slot - 4);
-        ctx.textAlign = 'center'; ctx.font = '9px monospace';
-        ctx.fillText(def.name.slice(0, 4), cx + slot / 2, cy + slot / 2 + 2);
+        // draw item icon
+        const icon = Assets.getItemIcon(it.id);
+        if (icon) {
+          const iw = icon.width, ih = icon.height;
+          const scale = Math.min((slot - 8) / iw, (slot - 8) / ih);
+          const dw = Math.round(iw * scale), dh = Math.round(ih * scale);
+          ctx.drawImage(icon, cx + (slot - dw) / 2, cy + (slot - dh) / 2 - 4, dw, dh);
+        } else {
+          ctx.fillStyle = Items.color(def);
+          ctx.fillRect(cx + 12, cy + 12, slot - 24, slot - 24);
+        }
+        // item name below icon
+        ctx.fillStyle = Items.color(def); ctx.font = '9px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(def.name.slice(0, 5), cx + slot / 2, cy + slot - 5);
+        // stack count
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'right';
+        if (it.count > 1) ctx.fillText(it.count, cx + slot - 3, cy + 13);
       }
     }
     // gold
@@ -141,9 +152,11 @@ const InventoryUI = (() => {
       ctx.fillText(labels[k], cx + 6, cy + 14);
       const it = p.equipment[k];
       if (it) {
+        const icon = Assets.getItemIcon(it.id);
+        if (icon) ctx.drawImage(icon, cx + 6, cy + 18, 22, 22);
         ctx.fillStyle = Items.color(it);
-        ctx.font = '12px monospace';
-        ctx.fillText(it.name, cx + 6, cy + 32);
+        ctx.font = '11px monospace'; ctx.textAlign = 'left';
+        ctx.fillText(it.name, cx + 32, cy + 34);
       } else {
         ctx.fillStyle = '#4a3a2a'; ctx.font = '11px monospace';
         ctx.fillText('(空)', cx + 6, cy + 32);
