@@ -393,8 +393,8 @@
     ctx.fillStyle = '#ffe040'; ctx.textAlign = 'center'; ctx.font = 'bold 56px monospace';
     ctx.fillText('胜利!', 480, 240);
     ctx.fillStyle = '#f0e4c8'; ctx.font = '20px monospace';
-    ctx.fillText('你击败了范克里夫,艾尔文森林又回到了安宁。', 480, 290);
-    ctx.fillText('你已通关 Micro WoW 的主线。', 480, 320);
+    ctx.fillText('死亡矿井副本通关!你击败了范克里夫!', 480, 290);
+    ctx.fillText('艾尔文森林又回到了安宁。你已通关主线。', 480, 320);
     ctx.fillStyle = '#c0c0c0'; ctx.font = '15px monospace';
     ctx.fillText(`最终等级: ${game.player.level}   金币: ${game.player.gold}`, 480, 370);
     ctx.fillStyle = '#8a7a5a'; ctx.font = '14px monospace';
