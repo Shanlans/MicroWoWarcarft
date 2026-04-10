@@ -48,9 +48,9 @@ const ELWYNN_ROWS = [
   "TGGTTGGGGGGGGGDGGGDGGGGGGGGGGGGGGGGGGGGT",
   "TGGGGGGGGGGGGGDGGGDGGGGGGTTGGGGGGGGGGGGT",
   "TGGGGGGGTTGGGGDGGGDGGGGGGGGGGGGGGGGTTGGT",
-  "TGGGGGGGGGGGGGDGGGDGGGGGGGGGGGGGGGGGGGGT",
-  "TGGGGGGGGGGGGGDGGGDDDDDDDDDDDDDDDDDDGGGT",
-  "TGGTTGGGGGGGGGDGGGGGGGGGGGGGGGGGGGGGGGGT",
+  "TGGGGGGGGGGGGGDGGGDGGGGGGGGGGGGGGGGGDDDD",
+  "TGGGGGGGGGGGGGDGGGDDDDDDDDDDDDDDDDDGDDDD",
+  "TGGTTGGGGGGGGGDGGGGGGGGGGGGGGGGGGGGGGDDT",
   "TGGGGGGGGGGGGGDGGGGGGGGGTTGGGGGGGGGGGGGT",
   "TGGGGGGGGGGGGGDGGGGGGGGGGGGGGGGGGGGTTGGT",
   "TGGGTTGGGGGGGGDGGGGGGGGGGGGGGGGGGGGGGGGT",
@@ -117,9 +117,9 @@ const WESTFALL_ROWS = [
   "TGGDGGGGGGGGGGGGGSPPPPPPSGGGGGGGGGGGDGGT",
   "TGGDGGGGGGGGGGGGGSPPPPPPSGGGGGGGGGGGDGGT",
   "TGGDGGGGGGGGGGGGGSSSSSSSSGGGGGGGGGGGDGGT",
-  "TGGDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGDGGT",
-  "TGGDGGGGTTGGGGGGGGGGGGGGGGGGGGGGGGGGDGGT",
-  "TGGDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGDGGT",
+  "DDDDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGDGGT",
+  "DDDDGGGGTTGGGGGGGGGGGGGGGGGGGGGGGGGGDGGT",
+  "DDGDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGDGGT",
   "TGGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGGT",
   "TGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGT",
   "TGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGT",
@@ -180,6 +180,28 @@ class World {
       ctx.fillRect(px - 5, py - 5, 10, 10);
       ctx.fillStyle = '#ffe040';
       ctx.fillRect(px - 4, py - 4, 8, 8);
+    }
+    // zone exit markers (yellow glow for zone transitions)
+    for (const t of this.transitions) {
+      if (t.to !== 'deadmines') {
+        const px = t.x - cam.x, py = t.y - cam.y;
+        const time = performance.now() / 1000;
+        const pulse = 0.2 + Math.sin(time * 2) * 0.1;
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ffe040';
+        ctx.fillRect(px, py, t.w, t.h);
+        ctx.restore();
+        // arrow + label
+        ctx.save();
+        ctx.textAlign = 'center'; ctx.font = 'bold 13px monospace';
+        const labels = { westfall: '→ 西部荒野', elwynn: '← 艾尔文森林' };
+        ctx.fillStyle = '#000';
+        ctx.fillText(labels[t.to] || t.to, px + t.w / 2 + 1, py - 6);
+        ctx.fillStyle = '#ffe040';
+        ctx.fillText(labels[t.to] || t.to, px + t.w / 2, py - 7);
+        ctx.restore();
+      }
     }
     // dungeon portal beacon (visible from far away, through walls)
     for (const t of this.transitions) {
@@ -303,8 +325,8 @@ function buildElwynn(world, player) {
   world.npcs.push(NPC.create('trainerHunter',   18 * TILE, 15 * TILE));
   world.npcs.push(NPC.create('guardMarshal',    15 * TILE, 9 * TILE));
 
-  // Transition to Westfall (east edge, rows 23-25)
-  world.transitions.push({ x: 38 * TILE, y: 22 * TILE, w: TILE * 2, h: TILE * 3, to: 'westfall' });
+  // Transition to Westfall (east edge exit, rows 22-24)
+  world.transitions.push({ x: 37 * TILE, y: 22 * TILE, w: TILE * 3, h: TILE * 3, to: 'westfall' });
 
   // Player spawn in town
   player.x = 15 * TILE; player.y = 12 * TILE;
@@ -326,8 +348,8 @@ function buildWestfall(world, player) {
   world.npcs.push(NPC.create('gryanStoutmantle', 7 * TILE, 5 * TILE));
   world.npcs.push(NPC.create('merchantWest',     7 * TILE, 7 * TILE));
 
-  // transition back to elwynn
-  world.transitions.push({ x: 0, y: 22 * TILE, w: TILE, h: TILE * 3, to: 'elwynn' });
+  // transition back to elwynn (west edge exit, rows 23-25)
+  world.transitions.push({ x: 0, y: 23 * TILE, w: TILE * 3, h: TILE * 3, to: 'elwynn' });
 
   // dungeon entrance to Deadmines (near where VanCleef used to be)
   world.transitions.push({ x: 20 * TILE, y: 18 * TILE, w: TILE * 2, h: TILE * 2, to: 'deadmines' });
