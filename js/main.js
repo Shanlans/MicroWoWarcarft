@@ -176,8 +176,13 @@
       const d = Math.hypot(c.x - pc.x, c.y - pc.y);
       if (d < bestD) { bestD = d; best = e; }
     }
-    if (best !== game.player.target) game.player.autoAttacking = false;
-    game.player.target = best;
+    if (best) {
+      if (best !== game.player.target) game.player.autoAttacking = false;
+      game.player.target = best;
+      UI.toast('目标: [' + best.level + '] ' + best.name, '#ffe040');
+    } else {
+      UI.toast('附近没有敌人', '#8a8a8a');
+    }
   }
 
   // --- Playing update ---
