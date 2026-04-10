@@ -151,6 +151,116 @@ const UI = (() => {
       ctx.fillText(t.text, 480, 129 + i * 22);
       ctx.globalAlpha = 1;
     }
+
+    // ---- Mobile touch controls ----
+    if (Input.isMobile) drawMobileControls(ctx, game);
+  }
+
+  function drawMobileControls(ctx, game) {
+    const p = game.player;
+    const js = Input.joystick;
+
+    // Virtual joystick (left side)
+    const jx = 110, jy = 520, jr = 56;
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(jx, jy, jr, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.5;
+    if (js.active) {
+      ctx.fillStyle = '#ffe040';
+      ctx.beginPath();
+      ctx.arc(jx + js.dx * 36, jy + js.dy * 36, 20, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = '#c0c0c0';
+      ctx.beginPath(); ctx.arc(jx, jy, 16, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+
+    // Skill buttons (right side) + Tab + B/L
+    Input.touchBtns.length = 0;
+    const btnR = 30;
+    const skills = p.skills || [];
+    // skill 1-3 in a row
+    for (let i = 0; i < Math.min(3, skills.length); i++) {
+      const bx = 760 + i * 70, by = 530;
+      const sk = Skills.get(skills[i]);
+      const cd = p.cooldowns[skills[i]] || 0;
+      const col = cd > 0 ? '#4a3a2a' : (sk.cls === 'warrior' ? '#c04040' : sk.cls === 'mage' ? '#4060d0' : '#40a040');
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(bx, by, btnR + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(bx, by, btnR, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+      if (cd > 0) {
+        ctx.fillText(cd.toFixed(1), bx, by + 4);
+      } else {
+        ctx.fillText(sk.name.slice(0, 2), bx, by + 4);
+      }
+      ctx.restore();
+      Input.touchBtns.push({ x: bx, y: by, r: btnR, key: (i + 1).toString() });
+    }
+    // skill 4-5 above row
+    for (let i = 3; i < Math.min(5, skills.length); i++) {
+      const bx = 795 + (i - 3) * 70, by = 460;
+      const sk = Skills.get(skills[i]);
+      const cd = p.cooldowns[skills[i]] || 0;
+      const col = cd > 0 ? '#4a3a2a' : '#6a5a2a';
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(bx, by, 24, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(bx, by, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(cd > 0 ? cd.toFixed(1) : sk.name.slice(0, 2), bx, by + 3);
+      ctx.restore();
+      Input.touchBtns.push({ x: bx, y: by, r: 24, key: (i + 1).toString() });
+    }
+
+    // Tab (target nearest) button
+    const tabX = 680, tabY = 530;
+    ctx.save(); ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(tabX, tabY, 24, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4a6a8a';
+    ctx.beginPath(); ctx.arc(tabX, tabY, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('选敌', tabX, tabY + 4);
+    ctx.restore();
+    Input.touchBtns.push({ x: tabX, y: tabY, r: 24, key: 'tab' });
+
+    // B (bag) button
+    const bagX = 30, bagY = 460;
+    ctx.save(); ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(bagX, bagY, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#6a5a2a';
+    ctx.beginPath(); ctx.arc(bagX, bagY, 18, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('背包', bagX, bagY + 4);
+    ctx.restore();
+    Input.touchBtns.push({ x: bagX, y: bagY, r: 20, key: 'b' });
+
+    // L (quest log) button
+    const logX = 80, logY = 460;
+    ctx.save(); ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(logX, logY, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a4a6a';
+    ctx.beginPath(); ctx.arc(logX, logY, 18, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('任务', logX, logY + 4);
+    ctx.restore();
+    Input.touchBtns.push({ x: logX, y: logY, r: 20, key: 'l' });
   }
 
   return { draw, toast, update, getHotbarRects };
