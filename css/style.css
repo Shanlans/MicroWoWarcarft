@@ -39,13 +39,14 @@ html, body {
   text-shadow: 1px 1px 0 #000;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1000px), (max-height: 500px) {
   #game {
-    width: 100vw !important;
-    height: auto !important;
+    /* 960:640 = 3:2 aspect ratio, fit within viewport both orientations */
+    width: min(100vw, calc(100vh * 1.5)) !important;
+    height: min(100vh, calc(100vw / 1.5)) !important;
     border-width: 2px;
   }
   #hint { display: none; }
   body { overflow: hidden; }
-  #game-root { gap: 0; padding: 0; }
+  #game-root { gap: 0; padding: 0; justify-content: center; }
 }
