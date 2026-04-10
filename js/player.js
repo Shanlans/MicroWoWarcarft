@@ -124,7 +124,12 @@ class Player extends Entity {
     }
     this.gcd = Math.max(0, this.gcd - dt);
     this.autoAttackCd = Math.max(0, this.autoAttackCd - dt);
-    // auto-attack target in range (only after player manually engaged)
+    // keep target if alive; clear only when dead or null
+    if (this.target && this.target.dead) {
+      this.target = null;
+      this.autoAttacking = false;
+    }
+    // auto-attack only after player manually used a skill
     if (this.target && !this.target.dead && this.autoAttacking) {
       const range = this.cls === 'warrior' ? 48 : 200;
       if (this.distTo(this.target) <= range && this.autoAttackCd <= 0) {
@@ -140,9 +145,6 @@ class Player extends Entity {
         }
         this.autoAttackCd = 1.5;
       }
-    } else {
-      this.target = null;
-      this.autoAttacking = false;
     }
     // regen
     this.hp = Math.min(this.maxHp, this.hp + 3 * dt);
