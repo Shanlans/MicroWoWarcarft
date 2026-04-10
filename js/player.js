@@ -20,6 +20,7 @@ class Player extends Entity {
     this.inventory = [];
     this.target = null;
     this.autoAttackCd = 0;
+    this.autoAttacking = false; // only auto-attack after first manual skill use
     this.recomputeStats();
     this.hp = this.maxHp;
     this.mp = this.maxMp;
@@ -123,8 +124,8 @@ class Player extends Entity {
     }
     this.gcd = Math.max(0, this.gcd - dt);
     this.autoAttackCd = Math.max(0, this.autoAttackCd - dt);
-    // auto-attack target in range
-    if (this.target && !this.target.dead) {
+    // auto-attack target in range (only after player manually engaged)
+    if (this.target && !this.target.dead && this.autoAttacking) {
       const range = this.cls === 'warrior' ? 48 : 200;
       if (this.distTo(this.target) <= range && this.autoAttackCd <= 0) {
         const tc = this.target.center();
@@ -141,6 +142,7 @@ class Player extends Entity {
       }
     } else {
       this.target = null;
+      this.autoAttacking = false;
     }
     // regen
     this.hp = Math.min(this.maxHp, this.hp + 3 * dt);
@@ -185,6 +187,7 @@ class Player extends Entity {
       this.cooldowns[id] = sk.cd;
       this.mp -= sk.mp;
       this.gcd = 0.6;
+      this.autoAttacking = true; // enable auto-attack after first manual skill
       return true;
     } else {
       UI.toast('附近没有可攻击的目标', '#ffe040');

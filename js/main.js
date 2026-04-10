@@ -172,6 +172,7 @@
       const d = Math.hypot(c.x - pc.x, c.y - pc.y);
       if (d < bestD) { bestD = d; best = e; }
     }
+    if (best !== game.player.target) game.player.autoAttacking = false;
     game.player.target = best;
   }
 
@@ -222,7 +223,10 @@
           else UI.toast('距离太远', '#ffe040');
         } else {
           const e = pickTarget(Input.mouse.x, Input.mouse.y);
-          if (e) game.player.target = e;
+          if (e) {
+            if (e !== game.player.target) game.player.autoAttacking = false;
+            game.player.target = e;
+          }
         }
       }
     }
