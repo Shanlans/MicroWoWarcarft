@@ -13,6 +13,8 @@ const Skills = (() => {
         const dmg = Combat.roll(p, t, this.base + p.mainStat() * this.coef);
         t.takeDamage(dmg, p);
         t.applyDot({ name: '流血', dps: 5, duration: 3, src: p });
+        const tc = t.center();
+        Effects.slash(tc.x, tc.y, '#ff5050', 40);
         return true;
       },
     },
@@ -25,9 +27,13 @@ const Skills = (() => {
           if (!e.dead && p.distTo(e) <= this.range) {
             const dmg = Combat.roll(p, e, this.base + p.mainStat() * this.coef);
             e.takeDamage(dmg, p);
+            const ec = e.center();
+            Effects.slash(ec.x, ec.y, '#ffe040', 36);
             hit.push(e);
           }
         }
+        const pc = p.center();
+        Effects.ring(pc.x, pc.y, '#ffe040', this.range);
         return hit.length > 0;
       },
     },
@@ -38,6 +44,8 @@ const Skills = (() => {
         if (!t || t.dead || p.distTo(t) > this.range) return false;
         const dmg = Combat.roll(p, t, this.base + p.mainStat() * this.coef, 1.2);
         t.takeDamage(dmg, p);
+        const tc = t.center();
+        Effects.bigSlash(tc.x, tc.y, '#ff4040', 56);
         return true;
       },
     },
@@ -75,9 +83,13 @@ const Skills = (() => {
             const dmg = Combat.roll(p, e, this.base + p.mainStat() * this.coef);
             e.takeDamage(dmg, p);
             e.slowUntil = (performance.now() / 1000) + 2;
+            const ec = e.center();
+            Effects.iceBurst(ec.x, ec.y);
             hit.push(e);
           }
         }
+        const pc = p.center();
+        Effects.ring(pc.x, pc.y, '#80c0ff', this.range);
         return hit.length > 0;
       },
     },

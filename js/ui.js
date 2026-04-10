@@ -1,10 +1,13 @@
 // ui.js - HUD: hp/mp/xp bars, skill hotbar, target frame, toast
 const UI = (() => {
   const toasts = []; // { text, color, t }
+  let hotbarRects = []; // {x,y,w,h,index} - filled by draw(), read by main.js
 
   function toast(text, color = '#ffe040') {
     toasts.push({ text, color, t: 0 });
   }
+
+  function getHotbarRects() { return hotbarRects; }
 
   function update(dt) {
     for (let i = toasts.length - 1; i >= 0; i--) {
@@ -60,8 +63,10 @@ const UI = (() => {
     const total = 5 * slot + 4 * pad;
     const sx = (960 - total) / 2;
     const sy = 640 - 60;
+    hotbarRects = [];
     for (let i = 0; i < 5; i++) {
       const cx = sx + i * (slot + pad), cy = sy;
+      hotbarRects.push({ x: cx, y: cy, w: slot, h: slot, index: i });
       ctx.fillStyle = '#000'; ctx.fillRect(cx - 2, cy - 2, slot + 4, slot + 4);
       ctx.fillStyle = '#2a1a0a'; ctx.fillRect(cx, cy, slot, slot);
       ctx.strokeStyle = '#a07030'; ctx.strokeRect(cx, cy, slot, slot);
@@ -107,5 +112,5 @@ const UI = (() => {
     }
   }
 
-  return { draw, toast, update };
+  return { draw, toast, update, getHotbarRects };
 })();

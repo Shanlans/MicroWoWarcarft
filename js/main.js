@@ -20,6 +20,8 @@
       if (zone === 'elwynn') buildElwynn(this.world, this.player);
       else buildWestfall(this.world, this.player);
       if (spawn) { this.player.x = spawn.x; this.player.y = spawn.y; }
+      Effects.clear();
+      Combat.floaters.length = 0;
     },
   };
   window.game = game;
@@ -181,6 +183,7 @@
       // pause world while menus are open except for light things
       game.player.animate(dt);
       Combat.update(dt);
+      Effects.update(dt);
       UI.update(dt);
       return;
     }
@@ -195,16 +198,29 @@
     // Tab
     if (Input.isPressed('tab')) tabNearest();
 
-    // Mouse: click enemy -> target; click NPC nearby -> dialog
+    // Mouse: hotbar slot -> use skill; enemy -> target; NPC nearby -> dialog
     if (Input.mouse.clicked) {
-      const npc = pickNPC(Input.mouse.x, Input.mouse.y);
-      if (npc) {
-        const dx = (npc.x + npc.w/2) - (game.player.x + game.player.w/2);
-        const dy = (npc.y + npc.h/2) - (game.player.y + game.player.h/2);
-        if (Math.hypot(dx, dy) < 80) Dialog.open(npc, game);
-      } else {
-        const e = pickTarget(Input.mouse.x, Input.mouse.y);
-        if (e) game.player.target = e;
+      let consumed = false;
+      // hotbar first (it's UI, on top of world)
+      for (const r of UI.getHotbarRects()) {
+        if (Input.mouse.x >= r.x && Input.mouse.x < r.x + r.w &&
+            Input.mouse.y >= r.y && Input.mouse.y < r.y + r.h) {
+          game.player.useSkill(r.index, game.world);
+          consumed = true;
+          break;
+        }
+      }
+      if (!consumed) {
+        const npc = pickNPC(Input.mouse.x, Input.mouse.y);
+        if (npc) {
+          const dx = (npc.x + npc.w/2) - (game.player.x + game.player.w/2);
+          const dy = (npc.y + npc.h/2) - (game.player.y + game.player.h/2);
+          if (Math.hypot(dx, dy) < 80) Dialog.open(npc, game);
+          else UI.toast('距离太远', '#ffe040');
+        } else {
+          const e = pickTarget(Input.mouse.x, Input.mouse.y);
+          if (e) game.player.target = e;
+        }
       }
     }
 
@@ -220,6 +236,7 @@
     for (const e of game.world.enemies) e.update(dt, game.world, game.player);
     game.world.updateProjectiles(dt, game.player);
     Combat.update(dt);
+    Effects.update(dt);
     UI.update(dt);
 
     // Cleanup dead enemies (keep corpses briefly via dead flag)
@@ -260,6 +277,7 @@
     ents.sort((a, b) => (a.y + a.h) - (b.y + b.h));
     for (const e of ents) e.draw(ctx, Camera);
     game.world.drawProjectiles(ctx, Camera);
+    Effects.draw(ctx, Camera);
     Combat.draw(ctx, Camera);
     UI.draw(ctx, game);
     InventoryUI.draw(ctx, game);

@@ -167,6 +167,9 @@ class World {
         const tc = p.target.center();
         if (Math.hypot(p.x - tc.x, p.y - tc.y) < 18) {
           p.target.takeDamage(p.dmg, p.owner);
+          if (p.sprite === 'fireball') Effects.explosion(tc.x, tc.y, '#ff8040', 28);
+          else if (p.sprite === 'ice') Effects.iceBurst(tc.x, tc.y);
+          else if (p.sprite === 'arrow') Effects.spark(tc.x, tc.y, '#ffe080');
           if (p.onHit) p.onHit(p.target);
           this.projectiles.splice(i, 1);
           continue;

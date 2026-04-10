@@ -120,9 +120,11 @@ class Player extends Entity {
     if (this.target && !this.target.dead) {
       const range = this.cls === 'warrior' ? 48 : 200;
       if (this.distTo(this.target) <= range && this.autoAttackCd <= 0) {
+        const tc = this.target.center();
         if (this.cls === 'warrior') {
           const dmg = Combat.roll(this, this.target, this.atk + this.mainStat());
           this.target.takeDamage(dmg, this);
+          Effects.slash(tc.x, tc.y, '#ffffff', 30);
         } else {
           const sprite = this.cls === 'mage' ? 'fireball' : 'arrow';
           const dmg = this.atk + this.mainStat() * 0.8;
@@ -147,15 +149,38 @@ class Player extends Entity {
     return true;
   }
   useSkill(i, world) {
-    if (!this.canUseSkill(i)) return false;
     const id = this.skills[i];
+    if (!id) return false;
     const sk = Skills.get(id);
+    if ((this.cooldowns[id] || 0) > 0) {
+      UI.toast(sk.name + ' 冷却中', '#ff8080');
+      return false;
+    }
+    if (this.mp < sk.mp) {
+      UI.toast('法力不足', '#80a0ff');
+      return false;
+    }
+    if (this.gcd > 0) return false;
+    // single-target skills need a target
+    const needsTarget = sk.id === 'slash' || sk.id === 'heroicStrike' ||
+                        sk.id === 'fireball' || sk.id === 'frostbolt' ||
+                        sk.id === 'aimShot' || sk.id === 'viperSting';
+    if (needsTarget && (!this.target || this.target.dead)) {
+      UI.toast('需要选择目标', '#ffe040');
+      return false;
+    }
+    if (needsTarget && this.distTo(this.target) > sk.range) {
+      UI.toast('目标超出范围', '#ffe040');
+      return false;
+    }
     const ok = sk.onUse(this, this.target, world);
     if (ok) {
       this.cooldowns[id] = sk.cd;
       this.mp -= sk.mp;
       this.gcd = 0.6;
       return true;
+    } else {
+      UI.toast('附近没有可攻击的目标', '#ffe040');
     }
     return false;
   }
