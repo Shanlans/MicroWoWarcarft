@@ -47,6 +47,11 @@ class Entity {
       if (d.tick >= 1) {
         d.tick = 0;
         this.takeDamage(d.dps, d.src);
+        if (typeof Effects !== 'undefined') {
+          const c = this.center();
+          const col = d.name === '流血' ? '#ff3030' : d.name === '剧毒' ? '#40ff40' : '#80a0ff';
+          Effects.spark(c.x, c.y, col);
+        }
       }
       if (d.t >= d.duration) this.dots.splice(i, 1);
     }

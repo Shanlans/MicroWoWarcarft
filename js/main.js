@@ -287,18 +287,35 @@
 
   function drawDead() {
     drawPlaying();
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, 960, 640);
-    ctx.fillStyle = '#ff4040'; ctx.textAlign = 'center'; ctx.font = 'bold 64px monospace';
-    ctx.fillText('你死了', 480, 280);
+    ctx.fillStyle = 'rgba(30,0,0,0.72)'; ctx.fillRect(0, 0, 960, 640);
+    ctx.fillStyle = '#ff4040'; ctx.textAlign = 'center'; ctx.font = 'bold 72px monospace';
+    ctx.fillText('你死了', 480, 260);
     ctx.fillStyle = '#f0e4c8'; ctx.font = '18px monospace';
-    ctx.fillText('按空格键在闪金镇复活', 480, 330);
+    ctx.fillText('你失去了一些金币作为修理费', 480, 310);
+    ctx.fillStyle = '#ffe040'; ctx.font = 'bold 22px monospace';
+    ctx.fillText('按 空格键 在闪金镇旅店复活', 480, 360);
+    ctx.fillStyle = '#8a7a5a'; ctx.font = '13px monospace';
+    ctx.fillText(`当前等级 ${game.player.level}  ·  金币 ${game.player.gold}`, 480, 400);
     if (Input.isPressed(' ')) {
       const p = game.player;
+      // 10% gold repair cost, capped at 50
+      const cost = Math.min(50, Math.floor(p.gold * 0.1));
+      p.gold = Math.max(0, p.gold - cost);
       p.dead = false;
       p.hp = p.maxHp; p.mp = p.maxMp;
       p.dots = [];
+      p.target = null;
+      p.cooldowns = {};
+      p.gcd = 0;
+      // always revive in Goldshire
       if (game.world.zone !== 'elwynn') game.loadZone('elwynn');
-      else { p.x = 15 * TILE; p.y = 12 * TILE; }
+      else {
+        p.x = 15 * TILE; p.y = 12 * TILE;
+        game.world.projectiles.length = 0;
+        Effects.clear();
+      }
+      if (cost > 0) UI.toast(`复活 · 修理费 -${cost} 金`, '#ff8080');
+      else UI.toast('复活', '#80ff80');
       game.state = STATE.PLAYING;
     }
   }

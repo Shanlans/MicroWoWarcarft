@@ -32,7 +32,10 @@ class Enemy extends Entity {
     this.name = t.name;
     this.level = t.level;
     this.critChance = () => 0.03;
+    this.respawnAt = 0;
     this.onDeath = (from) => {
+      // normal enemies respawn after 45 seconds, bosses stay dead
+      if (!t.boss) this.respawnAt = performance.now() + 45000;
       if (from instanceof Player) {
         from.gainXp(t.xp);
         from.killLog[id] = (from.killLog[id] || 0) + 1;
@@ -47,8 +50,26 @@ class Enemy extends Entity {
       }
     };
   }
+  tryRespawn(player) {
+    if (!this.dead || !this.respawnAt) return;
+    if (performance.now() < this.respawnAt) return;
+    // don't respawn right under the player's nose
+    const pc = player.center();
+    const dx = this.spawnX + this.w / 2 - pc.x;
+    const dy = this.spawnY + this.h / 2 - pc.y;
+    if (Math.hypot(dx, dy) < 180) return;
+    this.hp = this.maxHp;
+    this.dead = false;
+    this.x = this.spawnX;
+    this.y = this.spawnY;
+    this.state = 'idle';
+    this.dots = [];
+    this.damageFlash = 0;
+    this.attackCd = 0;
+    this.respawnAt = 0;
+  }
   update(dt, world, player) {
-    if (this.dead) return;
+    if (this.dead) { this.tryRespawn(player); return; }
     this.updateDots(dt);
     const slowed = (performance.now() / 1000) < this.slowUntil;
     const speed = this.speed * (slowed ? 0.5 : 1);
@@ -133,5 +154,19 @@ class Enemy extends Entity {
     ctx.fillText(`[${this.level}] ${this.name}`, x + this.w / 2 + 1, y - 3);
     ctx.fillStyle = this.template.boss ? '#ff6060' : '#ffd0a0';
     ctx.fillText(`[${this.level}] ${this.name}`, x + this.w / 2, y - 4);
+    // debuff icons above the hp bar
+    if (this.dots.length > 0) {
+      ctx.textAlign = 'center';
+      let ix = x + this.w / 2 - (this.dots.length * 7);
+      for (const d of this.dots) {
+        const col = d.name === '流血' ? '#d02020' : d.name === '剧毒' ? '#30b030' : '#6080ff';
+        ctx.fillStyle = '#000'; ctx.fillRect(ix - 1, y - 28, 12, 12);
+        ctx.fillStyle = col;   ctx.fillRect(ix, y - 27, 10, 10);
+        // remaining seconds
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 8px monospace';
+        ctx.fillText(Math.ceil(d.duration - d.t), ix + 5, y - 18);
+        ix += 14;
+      }
+    }
   }
 }

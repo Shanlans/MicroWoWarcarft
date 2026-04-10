@@ -47,15 +47,31 @@ const UI = (() => {
     if (p.target && !p.target.dead) {
       const t = p.target;
       const tx = 700;
+      const th = t.dots.length > 0 ? 72 : 50;
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.fillRect(tx, 10, 250, 50);
-      ctx.strokeStyle = '#a07030'; ctx.strokeRect(tx, 10, 250, 50);
+      ctx.fillRect(tx, 10, 250, th);
+      ctx.strokeStyle = '#a07030'; ctx.strokeRect(tx, 10, 250, th);
       ctx.fillStyle = t.template.boss ? '#ff6060' : '#f0e4c8';
       ctx.font = 'bold 13px monospace'; ctx.textAlign = 'left';
       ctx.fillText(`[${t.level}] ${t.name}`, tx + 10, 28);
       drawBar(ctx, tx + 10, 34, 230, 10, t.hp / t.maxHp, t.template.boss ? '#ff2020' : '#d04040');
       ctx.fillStyle = '#fff'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
       ctx.fillText(`${Math.floor(t.hp)}/${t.maxHp}`, tx + 125, 43);
+      // debuffs row
+      if (t.dots.length > 0) {
+        ctx.textAlign = 'left';
+        let dx = tx + 10, dy = 52;
+        for (const d of t.dots) {
+          const col = d.name === '流血' ? '#d02020' : d.name === '剧毒' ? '#30b030' : '#6080ff';
+          ctx.fillStyle = '#000'; ctx.fillRect(dx - 1, dy - 1, 62, 16);
+          ctx.fillStyle = col;   ctx.fillRect(dx, dy, 14, 14);
+          ctx.fillStyle = '#fff'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+          ctx.fillText(Math.ceil(d.duration - d.t), dx + 7, dy + 11);
+          ctx.fillStyle = '#f0e4c8'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+          ctx.fillText(d.name, dx + 18, dy + 11);
+          dx += 68;
+        }
+      }
     }
 
     // Skill hotbar
