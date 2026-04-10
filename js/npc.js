@@ -50,8 +50,18 @@ const NPC = (() => {
     gryanStoutmantle: {
       name: '人民军长官 格里安',
       color: '#ffe040',
-      quests: ['q_mech_parts', 'q_vancleef'],
+      quests: ['q_mech_parts', 'q_clear_mines', 'q_vancleef'],
       dialog: ['你必须帮助我们对抗迪菲亚兄弟会!'],
+    },
+    dungeonGuide: {
+      name: '矿工 杰克森',
+      color: '#c080ff',
+      quests: ['q_foreman'],
+      dialog: [
+        '小心!这里面是死亡矿井!',
+        '迪菲亚兄弟会把这里当作秘密基地。',
+        '里面的怪物可不好对付,准备好了再进去。',
+      ],
     },
     merchantWest: {
       name: '西部商人 萨尔玛',
