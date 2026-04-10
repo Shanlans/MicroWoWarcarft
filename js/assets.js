@@ -28,27 +28,46 @@ const Assets = (() => {
     return c;
   }
 
-  // ---- Palettes ----
+  // Pokemon GBA style: 1px black outline around all non-transparent pixels
+  function addOutline(src) {
+    const sw = src.width, sh = src.height;
+    const c = makeCanvas(sw + 2, sh + 2);
+    const ctx = c.getContext('2d');
+    // draw offset copies in 4 cardinal directions
+    for (const [ox, oy] of [[0,1],[2,1],[1,0],[1,2]]) {
+      ctx.drawImage(src, ox, oy);
+    }
+    // turn all drawn pixels to black
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, sw + 2, sh + 2);
+    // draw original sprite on top
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(src, 1, 1);
+    return c;
+  }
+
+  // ---- Palettes (Pokemon GBA vibrant style) ----
   const PAL = {
-    grass:   ['#3b7a2e', '#2d5f22', '#4a8a3a', '#6fa44a'],
-    dirt:    ['#6b4a28', '#54381d', '#8a6237', '#a3784a'],
-    stone:   ['#888888', '#5a5a5a', '#aaaaaa', '#c8c8c8'],
-    water:   ['#2a4a8a', '#1d3a70', '#4a6ab0', '#6a8ad0'],
-    wood:    ['#5a3a1a', '#3a2510', '#7a5228', '#9a6a3a'],
-    roof:    ['#8a2a2a', '#5a1a1a', '#aa3a3a', '#c85a5a'],
-    tree:    ['#1a4a1a', '#0a2a0a', '#2d6a2d', '#3a7a3a'],
-    warrior: ['#c08040', '#6a3a1a', '#aaaaaa', '#c8c8c8', '#ffd28a', '#a02020'],
-    mage:    ['#2a4aaa', '#1a2a6a', '#ffd28a', '#e8c070', '#ffffff', '#aa3aff'],
-    hunter:  ['#2a6a2a', '#1a4a1a', '#ffd28a', '#8a5a2a', '#c0c0c0', '#a0522d'],
-    boar:    ['#5a3a28', '#3a2518', '#8a5a3a', '#ffffff', '#c83030'],
-    spider:  ['#1a1a1a', '#3a2a3a', '#aa2020', '#6a1a1a'],
-    kobold:  ['#aa8a5a', '#6a4a28', '#c8b070', '#4a2a10', '#ffffff'],
-    bandit:  ['#3a1a1a', '#1a0a0a', '#c08040', '#ffd28a', '#8a2020', '#aaaaaa'],
-    gnoll:   ['#c8a050', '#8a6a30', '#ffe090', '#4a2a10', '#ffffff'],
-    dmage:   ['#5a1a5a', '#3a0a3a', '#aa3aff', '#ffd28a', '#ffffff'],
-    dboss:   ['#2a2a2a', '#1a1a1a', '#aa3030', '#c8c8c8', '#ffe040', '#6a1a1a'],
-    mech:    ['#6a6a6a', '#3a3a3a', '#aa3030', '#ffe040', '#c8c8c8'],
-    npc:     ['#4a4a8a', '#2a2a5a', '#ffd28a', '#aa8a4a', '#ffffff', '#8a2020'],
+    grass:   ['#58C038', '#408020', '#78D858', '#90E870'],
+    dirt:    ['#C0A060', '#906830', '#E0C080', '#F0D898'],
+    stone:   ['#909090', '#606060', '#B8B8B8', '#D0D0D0'],
+    water:   ['#3890F8', '#2068C0', '#68B0FF', '#98D0FF'],
+    wood:    ['#805828', '#583818', '#A87838', '#C89848'],
+    roof:    ['#C83838', '#902020', '#E05050', '#F07070'],
+    tree:    ['#208030', '#105010', '#38A048', '#50C060'],
+    warrior: ['#C05030', '#802818', '#A0A0A8', '#C8C8D0', '#FFD8A8', '#D03020'],
+    mage:    ['#3858C8', '#202880', '#FFD8A8', '#E8C078', '#F0F0F8', '#B848FF'],
+    hunter:  ['#388838', '#205020', '#FFD8A8', '#986838', '#C8C8C8', '#B06030'],
+    boar:    ['#785030', '#482818', '#A07048', '#F0F0F0', '#D83030'],
+    spider:  ['#282028', '#483048', '#D02020', '#801010'],
+    kobold:  ['#C8A060', '#886830', '#E8C878', '#583018', '#F0F0F0'],
+    bandit:  ['#581818', '#300808', '#C88040', '#FFD8A8', '#B02020', '#B0B0B0'],
+    gnoll:   ['#D0A848', '#907028', '#F8E090', '#583018', '#F0F0F0'],
+    dmage:   ['#702870', '#480848', '#C848FF', '#FFD8A8', '#F0F0F0'],
+    dboss:   ['#383838', '#1C1C1C', '#C03030', '#D0D0D0', '#FFE040', '#801818'],
+    mech:    ['#808080', '#484848', '#C03030', '#FFE040', '#D0D0D0'],
+    npc:     ['#5060A8', '#303878', '#FFD8A8', '#B89050', '#F0F0F0', '#B02020'],
     fireball:['#ff6a1a', '#ffd040', '#ff2020', '#ffffff'],
     arrow:   ['#8a5a2a', '#5a3a1a', '#c8c8c8', '#ffffff'],
     ice:     ['#6ac0ff', '#2a8ad0', '#c8e8ff', '#ffffff'],
@@ -255,7 +274,7 @@ const Assets = (() => {
         let g = base(step, dir);
         // For left/right, we can mirror a down frame
         if (dir === 'left') g = g.map(row => row.slice().reverse());
-        return render(g, palette, 2);
+        return addOutline(render(g, palette, 2));
       });
     }
     return out;
@@ -401,36 +420,281 @@ const Assets = (() => {
     [0,0,0,0,0,0,0,0],
   ];
 
+  // ---- Item icon sprites (10x10, scale 2 = 20x20, + outline) ----
+  const ICON_PAL = {
+    sword:   ['#A0A0A8', '#707078', '#805828', '#C8C8D0'],
+    staff:   ['#805828', '#583818', '#B848FF', '#D080FF'],
+    bow:     ['#805828', '#583818', '#C8C8C8', '#F0F0F0'],
+    helm:    ['#A0A0A8', '#707078', '#C8C8D0', '#F0F0F0'],
+    chest:   ['#A0A0A8', '#707078', '#C8C8D0', '#F0F0F0'],
+    legs:    ['#A0A0A8', '#707078', '#C8C8D0', '#F0F0F0'],
+    ring:    ['#FFD040', '#C8A020', '#FFE880', '#FFFFFF'],
+    trinket: ['#40C060', '#208030', '#80E890', '#FFFFFF'],
+    potion:  ['#D83030', '#901818', '#F06060', '#FFFFFF'],
+    bread:   ['#D0A848', '#907028', '#F0D080', '#F8E8B0'],
+    water_i: ['#3890F8', '#2068C0', '#68B0FF', '#FFFFFF'],
+    meat:    ['#D83030', '#901818', '#F06060', '#F0D0A0'],
+    gear:    ['#A0A0A8', '#707078', '#C8C8D0', '#FFE040'],
+    letter:  ['#E0C888', '#B09858', '#F0E0B0', '#383838'],
+    quest:   ['#FFE040', '#C8A020', '#FFF080', '#FFFFFF'],
+  };
+
+  const iconSword = [
+    [0,0,0,0,0,0,0,0,4,0],
+    [0,0,0,0,0,0,0,4,1,0],
+    [0,0,0,0,0,0,4,1,0,0],
+    [0,0,0,0,0,4,1,0,0,0],
+    [0,0,0,0,4,1,0,0,0,0],
+    [0,0,0,4,1,0,0,0,0,0],
+    [0,0,3,2,1,0,0,0,0,0],
+    [0,3,3,3,0,0,0,0,0,0],
+    [0,0,3,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconStaff = [
+    [0,0,0,3,4,3,0,0,0,0],
+    [0,0,0,4,3,4,0,0,0,0],
+    [0,0,0,3,4,3,0,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0],
+  ];
+  const iconBow = [
+    [0,0,0,0,0,1,0,0,0,0],
+    [0,0,0,0,1,0,3,0,0,0],
+    [0,0,0,1,0,0,3,0,0,0],
+    [0,0,1,0,0,3,0,0,0,0],
+    [0,1,2,0,3,0,0,0,0,0],
+    [0,1,2,0,3,0,0,0,0,0],
+    [0,0,1,0,0,3,0,0,0,0],
+    [0,0,0,1,0,0,3,0,0,0],
+    [0,0,0,0,1,0,3,0,0,0],
+    [0,0,0,0,0,1,0,0,0,0],
+  ];
+  const iconHelm = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,3,3,3,3,0,0,0],
+    [0,0,3,1,1,1,1,3,0,0],
+    [0,3,1,1,1,1,1,1,3,0],
+    [0,3,1,1,1,1,1,1,3,0],
+    [0,2,2,2,2,2,2,2,2,0],
+    [0,2,4,2,0,0,2,4,2,0],
+    [0,0,2,2,0,0,2,2,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconChest = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,3,3,3,3,3,3,0,0],
+    [0,3,1,1,1,1,1,1,3,0],
+    [0,1,1,3,1,1,3,1,1,0],
+    [0,1,1,3,1,1,3,1,1,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [0,2,1,1,1,1,1,1,2,0],
+    [0,0,2,2,2,2,2,2,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconLegs = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,3,3,3,3,3,3,0,0],
+    [0,0,1,1,1,1,1,1,0,0],
+    [0,0,1,1,1,1,1,1,0,0],
+    [0,0,1,1,2,2,1,1,0,0],
+    [0,0,1,1,0,0,1,1,0,0],
+    [0,0,1,1,0,0,1,1,0,0],
+    [0,0,1,1,0,0,1,1,0,0],
+    [0,0,2,2,0,0,2,2,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconRing = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,3,3,3,3,0,0,0],
+    [0,0,3,1,4,4,1,3,0,0],
+    [0,0,1,0,0,0,0,1,0,0],
+    [0,0,1,0,0,0,0,1,0,0],
+    [0,0,2,1,0,0,1,2,0,0],
+    [0,0,0,2,2,2,2,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconTrinket = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,4,4,0,0,0,0],
+    [0,0,0,4,3,3,4,0,0,0],
+    [0,0,4,3,1,1,3,4,0,0],
+    [0,0,4,1,1,1,1,4,0,0],
+    [0,0,4,3,1,1,3,4,0,0],
+    [0,0,0,4,3,3,4,0,0,0],
+    [0,0,0,0,4,4,0,0,0,0],
+    [0,0,0,0,2,2,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconPotion = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,4,4,0,0,0,0],
+    [0,0,0,0,2,2,0,0,0,0],
+    [0,0,0,2,1,1,2,0,0,0],
+    [0,0,2,1,3,3,1,2,0,0],
+    [0,0,2,1,3,3,1,2,0,0],
+    [0,0,2,1,1,1,1,2,0,0],
+    [0,0,0,2,1,1,2,0,0,0],
+    [0,0,0,0,2,2,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconBread = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,3,3,3,3,0,0,0],
+    [0,0,3,4,4,4,4,3,0,0],
+    [0,3,1,3,3,3,3,1,3,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [0,0,2,2,2,2,2,2,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconWater = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,4,4,0,0,0,0],
+    [0,0,0,0,2,2,0,0,0,0],
+    [0,0,0,2,1,1,2,0,0,0],
+    [0,0,2,1,3,3,1,2,0,0],
+    [0,0,2,1,3,3,1,2,0,0],
+    [0,0,2,1,1,1,1,2,0,0],
+    [0,0,0,2,1,1,2,0,0,0],
+    [0,0,0,0,2,2,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconMeat = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,0,0,0,0],
+    [0,0,0,1,3,3,1,0,0,0],
+    [0,0,1,3,1,1,3,1,0,0],
+    [0,0,1,3,1,3,3,1,0,0],
+    [0,0,0,1,1,1,1,0,0,0],
+    [0,0,0,4,4,0,0,0,0,0],
+    [0,0,4,2,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconGear = [
+    [0,0,0,1,1,1,1,0,0,0],
+    [0,0,1,2,0,0,2,1,0,0],
+    [0,1,0,0,0,0,0,0,1,0],
+    [1,2,0,0,3,3,0,0,2,1],
+    [1,0,0,3,4,4,3,0,0,1],
+    [1,0,0,3,4,4,3,0,0,1],
+    [1,2,0,0,3,3,0,0,2,1],
+    [0,1,0,0,0,0,0,0,1,0],
+    [0,0,1,2,0,0,2,1,0,0],
+    [0,0,0,1,1,1,1,0,0,0],
+  ];
+  const iconLetter = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [0,1,2,3,3,3,3,2,1,0],
+    [0,1,3,2,3,3,2,3,1,0],
+    [0,1,3,3,2,2,3,3,1,0],
+    [0,1,3,3,3,3,3,3,1,0],
+    [0,1,3,4,4,4,4,3,1,0],
+    [0,1,3,4,4,4,4,3,1,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+  const iconQuest = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,1,1,1,0,0,0],
+    [0,0,1,3,3,3,3,1,0,0],
+    [0,0,0,0,0,3,3,1,0,0],
+    [0,0,0,0,3,3,1,0,0,0],
+    [0,0,0,1,3,1,0,0,0,0],
+    [0,0,0,1,3,1,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,3,1,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+  ];
+
   // ---- Build cache ----
   function build() {
-    cache.grass = render(grassTile, PAL.grass, 2);
-    cache.dirt  = render(dirtTile,  PAL.dirt,  2);
-    cache.stone = render(stoneTile, PAL.stone, 2);
-    cache.water = render(waterTile, PAL.water, 2);
-    cache.wood  = render(woodTile,  PAL.wood,  2);
-    cache.roof  = render(roofTile,  PAL.roof,  2);
-    cache.tree  = render(treeTile,  PAL.tree,  2);
+    cache.grass = addOutline(render(grassTile, PAL.grass, 2));
+    cache.dirt  = addOutline(render(dirtTile,  PAL.dirt,  2));
+    cache.stone = addOutline(render(stoneTile, PAL.stone, 2));
+    cache.water = addOutline(render(waterTile, PAL.water, 2));
+    cache.wood  = addOutline(render(woodTile,  PAL.wood,  2));
+    cache.roof  = addOutline(render(roofTile,  PAL.roof,  2));
+    cache.tree  = addOutline(render(treeTile,  PAL.tree,  2));
 
     cache.warrior = charFrames('warrior');
     cache.mage    = charFrames('mage');
     cache.hunter  = charFrames('hunter');
 
-    cache.boar   = render(boarSprite,   PAL.boar,   2);
-    cache.spider = render(spiderSprite, PAL.spider, 2);
-    cache.kobold = render(humanoid('kobold'), PAL.kobold, 2);
-    cache.bandit = render(humanoid('bandit'), PAL.bandit, 2);
-    cache.gnoll  = render(humanoid('gnoll'),  PAL.gnoll,  2);
-    cache.dmage  = render(humanoid('dmage'),  PAL.dmage,  2);
-    cache.dboss  = render(humanoid('dboss'),  PAL.dboss,  2);
-    cache.mech   = render(mechSprite, PAL.mech, 2);
-    cache.npc    = render(humanoid('bandit'), PAL.npc, 2);
+    cache.boar   = addOutline(render(boarSprite,   PAL.boar,   2));
+    cache.spider = addOutline(render(spiderSprite, PAL.spider, 2));
+    cache.kobold = addOutline(render(humanoid('kobold'), PAL.kobold, 2));
+    cache.bandit = addOutline(render(humanoid('bandit'), PAL.bandit, 2));
+    cache.gnoll  = addOutline(render(humanoid('gnoll'),  PAL.gnoll,  2));
+    cache.dmage  = addOutline(render(humanoid('dmage'),  PAL.dmage,  2));
+    cache.dboss  = addOutline(render(humanoid('dboss'),  PAL.dboss,  2));
+    cache.mech   = addOutline(render(mechSprite, PAL.mech, 2));
+    cache.npc    = addOutline(render(humanoid('bandit'), PAL.npc, 2));
 
-    cache.fireball = render(fireballSprite, PAL.fireball, 2);
-    cache.arrow    = render(arrowSprite,    PAL.arrow,    2);
-    cache.ice      = render(iceSprite,      PAL.ice,      2);
+    cache.fireball = addOutline(render(fireballSprite, PAL.fireball, 2));
+    cache.arrow    = addOutline(render(arrowSprite,    PAL.arrow,    2));
+    cache.ice      = addOutline(render(iceSprite,      PAL.ice,      2));
+
+    // Item icons (10x10 at scale 2 = 20x20, with outline = 22x22)
+    cache.icon_sword   = addOutline(render(iconSword,   ICON_PAL.sword,   2));
+    cache.icon_staff   = addOutline(render(iconStaff,   ICON_PAL.staff,   2));
+    cache.icon_bow     = addOutline(render(iconBow,     ICON_PAL.bow,     2));
+    cache.icon_helm    = addOutline(render(iconHelm,    ICON_PAL.helm,    2));
+    cache.icon_chest   = addOutline(render(iconChest,   ICON_PAL.chest,   2));
+    cache.icon_legs    = addOutline(render(iconLegs,    ICON_PAL.legs,    2));
+    cache.icon_ring    = addOutline(render(iconRing,    ICON_PAL.ring,    2));
+    cache.icon_trinket = addOutline(render(iconTrinket, ICON_PAL.trinket, 2));
+    cache.icon_potion  = addOutline(render(iconPotion,  ICON_PAL.potion,  2));
+    cache.icon_bread   = addOutline(render(iconBread,   ICON_PAL.bread,   2));
+    cache.icon_water   = addOutline(render(iconWater,   ICON_PAL.water_i, 2));
+    cache.icon_meat    = addOutline(render(iconMeat,    ICON_PAL.meat,    2));
+    cache.icon_gear    = addOutline(render(iconGear,    ICON_PAL.gear,    2));
+    cache.icon_letter  = addOutline(render(iconLetter,  ICON_PAL.letter,  2));
+    cache.icon_quest   = addOutline(render(iconQuest,   ICON_PAL.quest,   2));
   }
 
   function get(name) { return cache[name]; }
 
-  return { build, get };
+  // Map item IDs from items.js to the appropriate icon canvas
+  function getItemIcon(itemId) {
+    const iconMap = {
+      // weapons
+      rustSword: 'icon_sword', ironSword: 'icon_sword', steelBlade: 'icon_sword',
+      oakStaff: 'icon_staff', arcaneStaff: 'icon_staff',
+      shortBow: 'icon_bow', longBow: 'icon_bow',
+      // armor
+      leatherCap: 'icon_helm', ironHelm: 'icon_helm', warmask: 'icon_helm',
+      leatherVest: 'icon_chest', chainMail: 'icon_chest',
+      leatherLegs: 'icon_legs', ironLegs: 'icon_legs',
+      copperRing: 'icon_ring', silverRing: 'icon_ring',
+      luckyCharm: 'icon_trinket',
+      // consumables
+      potion: 'icon_potion',
+      bread: 'icon_bread',
+      water: 'icon_water',
+      // quest items
+      boarMeat: 'icon_meat',
+      koboldGear: 'icon_gear',
+      banditLetter: 'icon_letter',
+      mechPart: 'icon_gear',
+      vcHead: 'icon_quest',
+    };
+    const key = iconMap[itemId];
+    return key ? cache[key] : cache['icon_quest'];
+  }
+
+  return { build, get, getItemIcon };
 })();
