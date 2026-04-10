@@ -8,7 +8,8 @@ const Input = (() => {
   let isMobile = false;
   const joystick = { active: false, cx: 0, cy: 0, dx: 0, dy: 0, touchId: null };
   const touchBtns = []; // populated by UI: {x, y, r, action}
-  const pendingActions = []; // callbacks to run next frame
+  let tabRequested = false; // direct flag for target-nearest
+  let skillRequested = -1;  // direct flag: skill index to fire
 
   function normalize(k) {
     if (k === 'ArrowUp') return 'w';
@@ -56,7 +57,9 @@ const Input = (() => {
         let hitBtn = false;
         for (const b of touchBtns) {
           if (Math.hypot(p.x - b.x, p.y - b.y) < b.r + 10) {
-            if (b.action) pendingActions.push(b.action);
+            if (b.flag === 'tab') tabRequested = true;
+            else if (b.flag === 'skill') skillRequested = b.skillIdx;
+            else if (b.key) { pressed[b.key] = true; keys[b.key] = true; }
             hitBtn = true;
             break;
           }
@@ -132,17 +135,22 @@ const Input = (() => {
     return false;
   }
 
-  function flushActions() {
-    const copy = pendingActions.splice(0);
-    for (const fn of copy) fn();
+  function consumeTab() {
+    if (tabRequested) { tabRequested = false; return true; }
+    return false;
+  }
+  function consumeSkill() {
+    if (skillRequested >= 0) { const i = skillRequested; skillRequested = -1; return i; }
+    return -1;
   }
 
   return {
     attachMouse, isDown, isPressed, mouse,
     get isMobile() { return isMobile; },
-    joystick,
-    touchBtns,
-    flushActions,
-    endFrame() { mouse.clicked = false; },
+    joystick, touchBtns, consumeTab, consumeSkill,
+    endFrame() {
+      mouse.clicked = false;
+      for (const b of touchBtns) { if (b.key) keys[b.key] = false; }
+    },
   };
 })();

@@ -5,6 +5,7 @@
   ctx.imageSmoothingEnabled = false;
   Input.attachMouse(canvas);
   Assets.build();
+  canvas.focus();
 
   const STATE = { MENU: 'menu', CHAR_SELECT: 'char', PLAYING: 'playing', GHOST: 'ghost', WIN: 'win' };
 
@@ -181,19 +182,18 @@
 
   // --- Playing update ---
   function updatePlaying(dt) {
-    // flush mobile touch button callbacks
-    Input.flushActions();
     // UI overlays first
     InventoryUI.update(game);
     Quests.updateLog();
     Dialog.update(game);
 
     if (InventoryUI.isOpen() || Quests.isLogOpen() || Dialog.isOpen()) {
-      // pause world while menus are open except for light things
       game.player.animate(dt);
       Combat.update(dt);
       Effects.update(dt);
       UI.update(dt);
+      // consume touch flags so they don't pile up
+      Input.consumeTab(); Input.consumeSkill();
       return;
     }
 
@@ -204,8 +204,14 @@
       return;
     }
 
-    // Tab
-    if (Input.isPressed('tab')) tabNearest();
+    // Tab / T key / mobile "选敌" button
+    if (Input.isPressed('tab') || Input.isPressed('t') || Input.consumeTab()) {
+      tabNearest();
+    }
+
+    // Mobile skill buttons
+    const si = Input.consumeSkill();
+    if (si >= 0) game.player.useSkill(si, game.world);
 
     // Mouse: hotbar slot -> use skill; enemy -> target; NPC nearby -> dialog
     if (Input.mouse.clicked) {

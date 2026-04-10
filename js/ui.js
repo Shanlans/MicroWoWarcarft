@@ -202,8 +202,7 @@ const UI = (() => {
       const cd = p.cooldowns[skills[i]] || 0;
       const col = cd > 0 ? '#4a3a2a' : (sk.cls === 'warrior' ? '#c04040' : sk.cls === 'mage' ? '#4060d0' : '#40a040');
       drawCircle(bx, by, btnR, col, cd > 0 ? cd.toFixed(1) : sk.name.slice(0, 2));
-      const idx = i;
-      Input.touchBtns.push({ x: bx, y: by, r: btnR, action() { p.useSkill(idx, game.world); } });
+      Input.touchBtns.push({ x: bx, y: by, r: btnR, flag: 'skill', skillIdx: i });
     }
     // Skill 4-5
     for (let i = 3; i < Math.min(5, skills.length); i++) {
@@ -211,45 +210,25 @@ const UI = (() => {
       const sk = Skills.get(skills[i]);
       const cd = p.cooldowns[skills[i]] || 0;
       drawCircle(bx, by, 22, cd > 0 ? '#4a3a2a' : '#6a5a2a', cd > 0 ? cd.toFixed(1) : sk.name.slice(0, 2));
-      const idx = i;
-      Input.touchBtns.push({ x: bx, y: by, r: 24, action() { p.useSkill(idx, game.world); } });
+      Input.touchBtns.push({ x: bx, y: by, r: 24, flag: 'skill', skillIdx: i });
     }
 
     // Tab (select nearest enemy)
     const tabX = 680, tabY = 530;
-    drawCircle(tabX, tabY, 24, '#4a6a8a', '选敌');
-    Input.touchBtns.push({ x: tabX, y: tabY, r: 28, action() {
-      let best = null, bestD = 9999;
-      const pc = p.center();
-      for (const e of game.world.enemies) {
-        if (e.dead) continue;
-        const c = e.center();
-        const d = Math.hypot(c.x - pc.x, c.y - pc.y);
-        if (d < bestD) { bestD = d; best = e; }
-      }
-      if (best) {
-        if (best !== p.target) p.autoAttacking = false;
-        p.target = best;
-        UI.toast(`目标: [${best.level}] ${best.name}`, '#ffe040');
-      } else {
-        UI.toast('附近没有敌人', '#8a8a8a');
-      }
-    }});
+    drawCircle(tabX, tabY, 28, '#4a6a8a', '选敌');
+    Input.touchBtns.push({ x: tabX, y: tabY, r: 32, flag: 'tab' });
 
     // Bag
     drawCircle(30, 460, 20, '#6a5a2a', '背包');
-    Input.touchBtns.push({ x: 30, y: 460, r: 24, action() { InventoryUI.toggle(); } });
+    Input.touchBtns.push({ x: 30, y: 460, r: 24, key: 'b' });
 
     // Quest log
     drawCircle(80, 460, 20, '#2a4a6a', '任务');
-    Input.touchBtns.push({ x: 80, y: 460, r: 24, action() { Quests.toggleLog(); } });
+    Input.touchBtns.push({ x: 80, y: 460, r: 24, key: 'l' });
 
     // Esc (save & menu)
     drawCircle(140, 460, 20, '#5a2a2a', '菜单');
-    Input.touchBtns.push({ x: 140, y: 460, r: 24, action() {
-      if (typeof Save !== 'undefined') Save.save(game);
-      game.state = 'menu';
-    }});
+    Input.touchBtns.push({ x: 140, y: 460, r: 24, key: 'escape' });
   }
 
   return { draw, toast, update, getHotbarRects };
