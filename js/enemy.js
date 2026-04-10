@@ -33,6 +33,12 @@ class Enemy extends Entity {
     this.level = t.level;
     this.critChance = () => 0.03;
     this.respawnAt = 0;
+    // Boss phase system
+    this.bossPhase = 0; // 0=not started, 1=normal, 2=adds, 3=enrage
+    this.bossEnraged = false;
+    this.bossDmgMult = 1;
+    this.bossSpeedMult = 1;
+    this.phaseTriggered = { 2: false, 3: false };
     this.onDeath = (from) => {
       // normal enemies respawn after 45 seconds, bosses stay dead
       if (!t.boss) this.respawnAt = performance.now() + 45000;
@@ -43,10 +49,19 @@ class Enemy extends Entity {
         for (const [itemId, chance] of t.loot || []) {
           if (Math.random() < chance) from.addItem(itemId, 1);
         }
-        // gold drop
-        const g = Math.floor(t.level * (1 + Math.random() * 2));
+        // gold drop - boss gets bonus gold
+        const baseGold = t.boss ? t.level * 5 : t.level;
+        const g = Math.floor(baseGold * (1 + Math.random() * 2));
         from.gold += g;
         Combat.pushFloat(this.x + this.w / 2, this.y - 18, '+' + g + ' 金', '#ffe040', 12);
+        // Boss dungeon kill message
+        if (t.boss && typeof game !== 'undefined' && game.world && game.world.zone === 'deadmines') {
+          UI.toast('副本首领 ' + t.name + ' 被击败!获得额外奖励!', '#ff40ff');
+          from.gainXp(t.xp); // bonus xp
+          const bonusGold = t.level * 10;
+          from.gold += bonusGold;
+          Combat.pushFloat(this.x + this.w / 2, this.y - 30, '+' + bonusGold + ' 金(副本奖励)', '#ff40ff', 14);
+        }
       }
     };
   }
@@ -68,25 +83,59 @@ class Enemy extends Entity {
     this.attackCd = 0;
     this.respawnAt = 0;
   }
+  updateBossPhase(world, player) {
+    if (!this.template.boss) return;
+    const pct = this.hp / this.maxHp;
+    // Start phase 1 on first engagement
+    if (this.bossPhase === 0 && this.state === 'chase') {
+      this.bossPhase = 1;
+    }
+    // Phase 2: at 50% HP, summon 2 adds
+    if (pct <= 0.5 && !this.phaseTriggered[2]) {
+      this.phaseTriggered[2] = true;
+      this.bossPhase = 2;
+      this.bossDmgMult = 1.3;
+      UI.toast(this.name + ': 你们都会死!', '#ff4040');
+      Effects.explosion(this.x + this.w / 2, this.y + this.h / 2, '#ff2020', 60);
+      // Spawn 2 bandit adds near the boss
+      const add1 = new Enemy('bandit', this.x - 60, this.y);
+      const add2 = new Enemy('bandit', this.x + 60, this.y);
+      world.enemies.push(add1);
+      world.enemies.push(add2);
+    }
+    // Phase 3: at 25% HP, enrage
+    if (pct <= 0.25 && !this.phaseTriggered[3]) {
+      this.phaseTriggered[3] = true;
+      this.bossPhase = 3;
+      this.bossEnraged = true;
+      this.bossDmgMult = 1.5;
+      this.bossSpeedMult = 1.5;
+      UI.toast(this.name + ': 这不可能!', '#ff2020');
+      Effects.ring(this.x + this.w / 2, this.y + this.h / 2, '#ff0000', 100);
+    }
+  }
   update(dt, world, player) {
     if (this.dead) { this.tryRespawn(player); return; }
     this.updateDots(dt);
     const slowed = (performance.now() / 1000) < this.slowUntil;
-    const speed = this.speed * (slowed ? 0.5 : 1);
+    const speed = this.speed * (slowed ? 0.5 : 1) * this.bossSpeedMult;
     this.attackCd = Math.max(0, this.attackCd - dt);
     const d = this.distTo(player);
     if (!player.dead && d <= this.sight) this.state = 'chase';
+    // Boss phase transitions
+    this.updateBossPhase(world, player);
     if (this.state === 'chase') {
       if (player.dead || d > this.sight * 1.8) {
         this.state = 'idle';
       } else if (d <= this.range) {
         // attack
         if (this.attackCd <= 0) {
+          const baseDmg = this.template.dmg * this.bossDmgMult;
           if (this.template.ranged) {
             world.spawnProjectile(this, player, this.template.proj || 'fireball',
-              Combat.roll(this, player, this.template.dmg));
+              Combat.roll(this, player, baseDmg));
           } else {
-            const dmg = Combat.roll(this, player, this.template.dmg);
+            const dmg = Combat.roll(this, player, baseDmg);
             player.takeDamage(dmg, this);
           }
           this.attackCd = 1.8;
@@ -137,6 +186,14 @@ class Enemy extends Entity {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.7 * (this.damageFlash / 0.15);
       ctx.drawImage(img, dx, dy);
+      ctx.drawImage(img, dx, dy);
+      ctx.restore();
+    }
+    // Enraged boss red glow (pulsing overlay)
+    if (this.bossEnraged) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.25 + 0.15 * Math.sin(performance.now() / 200);
       ctx.drawImage(img, dx, dy);
       ctx.restore();
     }

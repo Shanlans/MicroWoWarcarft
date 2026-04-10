@@ -24,6 +24,9 @@ class Player extends Entity {
     this.hp = this.maxHp;
     this.mp = this.maxMp;
     this.gcd = 0; // global cooldown
+    this.ghost = false;      // true = spirit form (grayscale world, can't fight)
+    this.deathX = 0;         // where the player died
+    this.deathY = 0;
     this.killLog = {}; // enemyId -> count
     this.questState = {}; // questId -> { status: 'active'|'done', progress }
     this.reachedZones = { elwynn: true };
@@ -246,9 +249,22 @@ class Player extends Entity {
   draw(ctx, cam) {
     const frames = Assets.get(this.cls);
     const img = frames[this.dir][this.animStep];
-    ctx.drawImage(img, Math.round(this.x - cam.x), Math.round(this.y - cam.y));
-    // hp bar under
-    this.drawHpBar(ctx, cam);
+    const dx = Math.round(this.x - cam.x), dy = Math.round(this.y - cam.y);
+    if (this.ghost) {
+      // ghostly transparent blue
+      const t = performance.now() / 1000;
+      ctx.save();
+      ctx.globalAlpha = 0.35 + Math.sin(t * 4) * 0.1;
+      ctx.drawImage(img, dx, dy);
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = '#6090d0';
+      ctx.fillRect(dx, dy, img.width, img.height);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, dx, dy);
+    }
+    if (!this.ghost) this.drawHpBar(ctx, cam);
   }
   drawHpBar(ctx, cam) {
     const x = Math.round(this.x - cam.x);

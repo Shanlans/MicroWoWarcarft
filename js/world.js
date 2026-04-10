@@ -58,6 +58,40 @@ const ELWYNN_ROWS = [
   "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
 ];
 
+// ---- Deadmines dungeon map (40x30) ----
+const DEADMINES_ROWS = [
+  "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS",
+  "SSSSSSSSSSSSSSSSSSDDSSSSSSSSSSSSSSSSSSSS",
+  "SSSSSSSSSSSSSSSSSSDDSSSSSSSSSSSSSSSSSSSS",
+  "SSSSSSSSSSSSSSSSDDDDDDSSSSSSSSSSSSSSSSSS",
+  "SSSSSSSSSSSSSSSSDDDDDDSSSSSSSSSSSSSSSSSS",
+  "SSSSSSSSSSDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSSSDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSSSDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSSSDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSSSDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSSSDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSSSDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSSSSSSSDDDDDDDDDDDDDDSSSSSSSSSSSSSS",
+  "SSSSSWWWWWWWDDDDDDDDDDDDDDSSSSSSSSSSSSSS",
+  "SSSSSWWWWWWWDDDDDDDDDDDDDDSSSSSSSSSSSSSS",
+  "SSSSSSSSSSSSDDDDDDDDDDDDDDSSSSSSSSSSSSSS",
+  "SSSSSSDDDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSDDDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSDDDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSDDDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSDDDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSDDDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSSSDDDDDDDDDDDDDDDDDDDDDDSSSSSSSSSSSS",
+  "SSSSDDDDPPPPPPPPPPPPPPPPPPPPDDDDSSSSSSSS",
+  "SSSSDDPPPPPPPPPPPPPPPPPPPPPPPPDDSSSSSSSS",
+  "SSSSDDPPPPPPPPPPPPPPPPPPPPPPPPDDSSSSSSSS",
+  "SSSSDDPPPPPPPPPPPPPPPPPPPPPPPPDDSSSSSSSS",
+  "SSSSDDPPPPPPPPPPPPPPPPPPPPPPPPDDSSSSSSSS",
+  "SSSSDDDDPPPPPPPPPPPPPPPPPPPPDDDDSSSSSSSS",
+  "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS",
+];
+
 // ---- Westfall map (40x30) ----
 const WESTFALL_ROWS = [
   "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
@@ -96,7 +130,8 @@ const WESTFALL_ROWS = [
 class World {
   constructor(zone) {
     this.zone = zone;
-    this.map = makeMap(zone === 'elwynn' ? ELWYNN_ROWS : WESTFALL_ROWS);
+    const rowsMap = { elwynn: ELWYNN_ROWS, westfall: WESTFALL_ROWS, deadmines: DEADMINES_ROWS };
+    this.map = makeMap(rowsMap[zone] || ELWYNN_ROWS);
     this.enemies = [];
     this.npcs = [];
     this.projectiles = [];
@@ -132,7 +167,8 @@ class World {
         if (!t) continue;
         // base ground under trees so it doesn't show black
         if (c === 'T' || c === 'S' || c === 'W') {
-          ctx.drawImage(Assets.get('grass'), x * TILE - cam.x, y * TILE - cam.y);
+          const bg = this.zone === 'deadmines' ? 'dirt' : 'grass';
+          ctx.drawImage(Assets.get(bg), x * TILE - cam.x, y * TILE - cam.y);
         }
         ctx.drawImage(Assets.get(t.asset), x * TILE - cam.x, y * TILE - cam.y);
       }
@@ -230,7 +266,6 @@ function buildWestfall(world, player) {
     ['dmage', 10, 14], ['dmage', 12, 16],
     ['dforeman', 30, 22], ['dforeman', 32, 24],
     ['mech', 8, 22], ['mech', 10, 24], ['mech', 28, 25],
-    ['vancleef', 21, 20],
   ];
   for (const [id, tx, ty] of spots) {
     world.enemies.push(new Enemy(id, tx * TILE, ty * TILE));
@@ -242,5 +277,31 @@ function buildWestfall(world, player) {
   // transition back to elwynn
   world.transitions.push({ x: 0, y: 22 * TILE, w: TILE, h: TILE * 3, to: 'elwynn' });
 
+  // dungeon entrance to Deadmines (near where VanCleef used to be)
+  world.transitions.push({ x: 20 * TILE, y: 18 * TILE, w: TILE * 2, h: TILE * 2, to: 'deadmines' });
+
   player.x = 2 * TILE; player.y = 23 * TILE;
+}
+
+function buildDeadmines(world, player) {
+  // First chamber gnolls (rows 6-12)
+  const spots = [
+    ['gnoll', 10, 7],  ['gnoll', 14, 8],  ['gnoll', 18, 9],
+    ['gnoll', 22, 7],  ['gnoll', 12, 11], ['gnoll', 20, 11],
+    // Second chamber: tougher enemies (rows 17-22)
+    ['dmage', 8, 18],  ['dmage', 14, 19],
+    ['dforeman', 10, 20], ['dforeman', 18, 20],
+    ['dmage', 6, 21],  ['dmage', 20, 18],
+    // Boss room: VanCleef (row 26, center of P area)
+    ['vancleef', 16, 26],
+  ];
+  for (const [id, tx, ty] of spots) {
+    world.enemies.push(new Enemy(id, tx * TILE, ty * TILE));
+  }
+
+  // transition back to westfall at the entrance (top edge)
+  world.transitions.push({ x: 17 * TILE, y: 0, w: TILE * 3, h: TILE, to: 'westfall' });
+
+  // player spawns at entrance corridor
+  player.x = 18 * TILE; player.y = 2 * TILE;
 }

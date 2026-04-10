@@ -6,7 +6,7 @@
   Input.attachMouse(canvas);
   Assets.build();
 
-  const STATE = { MENU: 'menu', CHAR_SELECT: 'char', PLAYING: 'playing', DEAD: 'dead', WIN: 'win' };
+  const STATE = { MENU: 'menu', CHAR_SELECT: 'char', PLAYING: 'playing', GHOST: 'ghost', WIN: 'win' };
 
   const game = {
     state: STATE.MENU,
@@ -14,14 +14,17 @@
     world: null,
     menuButtons: [],
     charButtons: [],
+    spiritHealer: null,
     loadZone(zone, spawn = null) {
       this.world = new World(zone);
-      window.game = this; // needed for npc marker lookup
+      window.game = this;
       if (zone === 'elwynn') buildElwynn(this.world, this.player);
-      else buildWestfall(this.world, this.player);
+      else if (zone === 'westfall') buildWestfall(this.world, this.player);
+      else if (zone === 'deadmines') buildDeadmines(this.world, this.player);
       if (spawn) { this.player.x = spawn.x; this.player.y = spawn.y; }
       Effects.clear();
       Combat.floaters.length = 0;
+      this.spiritHealer = null;
     },
   };
   window.game = game;
@@ -248,21 +251,35 @@
       if (game.player.x + game.player.w > t.x && game.player.x < t.x + t.w &&
           game.player.y + game.player.h > t.y && game.player.y < t.y + t.h) {
         game.loadZone(t.to);
-        UI.toast(t.to === 'westfall' ? '进入西部荒野!' : '回到艾尔文森林');
+        const names = { westfall: '进入西部荒野!', elwynn: '回到艾尔文森林', deadmines: '进入副本: 死亡矿井!' };
+        UI.toast(names[t.to] || t.to, t.to === 'deadmines' ? '#ff40ff' : '#ffe040');
         break;
       }
     }
 
-    // player death -> respawn
-    if (game.player.dead) {
-      game.state = STATE.DEAD;
+    // player death -> enter ghost mode
+    if (game.player.dead && !game.player.ghost) {
+      game.player.ghost = true;
+      game.player.deathX = game.player.x;
+      game.player.deathY = game.player.y;
+      game.player.target = null;
+      game.player.dots = [];
+      // spawn Spirit Healer near the player
+      const shx = Math.max(TILE * 2, game.player.x - 200);
+      const shy = Math.max(TILE * 2, game.player.y - 60);
+      game.spiritHealer = NPC.createSpiritHealer(shx, shy);
+      game.world.projectiles.length = 0;
+      Effects.clear();
+      UI.toast('你的灵魂离开了身体…… 寻找灵魂医者复活。', '#80d0ff');
     }
 
-    // Win: vancleef killed
-    const vc = game.world.enemies.find(e => e.id === 'vancleef');
-    if (vc && vc.dead && !game.world.bossDefeated) {
-      game.world.bossDefeated = true;
-      game.state = STATE.WIN;
+    // Win: vancleef killed in the Deadmines dungeon
+    if (game.world.zone === 'deadmines') {
+      const vc = game.world.enemies.find(e => e.id === 'vancleef');
+      if (vc && vc.dead && !game.world.bossDefeated) {
+        game.world.bossDefeated = true;
+        game.state = STATE.WIN;
+      }
     }
   }
 
@@ -285,38 +302,88 @@
     Dialog.draw(ctx, game);
   }
 
-  function drawDead() {
-    drawPlaying();
-    ctx.fillStyle = 'rgba(30,0,0,0.72)'; ctx.fillRect(0, 0, 960, 640);
-    ctx.fillStyle = '#ff4040'; ctx.textAlign = 'center'; ctx.font = 'bold 72px monospace';
-    ctx.fillText('你死了', 480, 260);
-    ctx.fillStyle = '#f0e4c8'; ctx.font = '18px monospace';
-    ctx.fillText('你失去了一些金币作为修理费', 480, 310);
-    ctx.fillStyle = '#ffe040'; ctx.font = 'bold 22px monospace';
-    ctx.fillText('按 空格键 在闪金镇旅店复活', 480, 360);
-    ctx.fillStyle = '#8a7a5a'; ctx.font = '13px monospace';
-    ctx.fillText(`当前等级 ${game.player.level}  ·  金币 ${game.player.gold}`, 480, 400);
-    if (Input.isPressed(' ')) {
-      const p = game.player;
-      // 10% gold repair cost, capped at 50
-      const cost = Math.min(50, Math.floor(p.gold * 0.1));
-      p.gold = Math.max(0, p.gold - cost);
-      p.dead = false;
-      p.hp = p.maxHp; p.mp = p.maxMp;
-      p.dots = [];
-      p.target = null;
-      p.cooldowns = {};
-      p.gcd = 0;
-      // always revive in Goldshire
-      if (game.world.zone !== 'elwynn') game.loadZone('elwynn');
-      else {
-        p.x = 15 * TILE; p.y = 12 * TILE;
-        game.world.projectiles.length = 0;
-        Effects.clear();
+  // ---- Ghost mode: grayscale world, Spirit Healer to revive ----
+  function updateGhost(dt) {
+    const p = game.player;
+    // allow movement in ghost form
+    let dx = 0, dy = 0;
+    if (Input.isDown('w')) dy -= 1;
+    if (Input.isDown('s')) dy += 1;
+    if (Input.isDown('a')) dx -= 1;
+    if (Input.isDown('d')) dx += 1;
+    p.moving = (dx !== 0 || dy !== 0);
+    if (p.moving) {
+      const len = Math.hypot(dx, dy);
+      dx /= len; dy /= len;
+      const sp = 200 * dt; // slightly faster in ghost form
+      const nx = p.x + dx * sp, ny = p.y + dy * sp;
+      if (!game.world.collidesBox(nx, p.y, p.w, p.h)) p.x = nx;
+      if (!game.world.collidesBox(p.x, ny, p.w, p.h)) p.y = ny;
+      if (Math.abs(dx) > Math.abs(dy)) p.dir = dx > 0 ? 'right' : 'left';
+      else p.dir = dy > 0 ? 'down' : 'up';
+    }
+    p.animate(dt);
+    Camera.follow(p, game.world.map);
+    UI.update(dt);
+    // check proximity to Spirit Healer
+    if (game.spiritHealer) {
+      const sh = game.spiritHealer;
+      const d = Math.hypot((p.x + p.w/2) - (sh.x + sh.w/2), (p.y + p.h/2) - (sh.y + sh.h/2));
+      if (d < 70 && Input.mouse.clicked) {
+        // revive!
+        const cost = Math.min(50, Math.floor(p.gold * 0.1));
+        p.gold = Math.max(0, p.gold - cost);
+        p.dead = false;
+        p.ghost = false;
+        p.hp = p.maxHp; p.mp = p.maxMp;
+        p.target = null;
+        p.cooldowns = {};
+        p.gcd = 0;
+        game.spiritHealer = null;
+        if (cost > 0) UI.toast(`复活! 修理费 -${cost} 金`, '#80ff80');
+        else UI.toast('复活!', '#80ff80');
+        return;
       }
-      if (cost > 0) UI.toast(`复活 · 修理费 -${cost} 金`, '#ff8080');
-      else UI.toast('复活', '#80ff80');
-      game.state = STATE.PLAYING;
+    }
+  }
+  function drawGhost() {
+    // draw the world in grayscale
+    ctx.fillStyle = '#0a0a1a'; ctx.fillRect(0, 0, 960, 640);
+    game.world.draw(ctx, Camera);
+    // player's corpse (semi-transparent at death location)
+    const cdx = Math.round(game.player.deathX - Camera.x);
+    const cdy = Math.round(game.player.deathY - Camera.y);
+    ctx.save(); ctx.globalAlpha = 0.3;
+    const f = Assets.get(game.player.cls);
+    ctx.drawImage(f.down[0], cdx, cdy);
+    ctx.restore();
+    // Spirit Healer
+    if (game.spiritHealer) game.spiritHealer.draw(ctx, Camera);
+    // player ghost
+    game.player.draw(ctx, Camera);
+    // apply grayscale + blue tint overlay to entire canvas
+    ctx.save();
+    ctx.filter = 'grayscale(85%) brightness(0.7)';
+    ctx.drawImage(canvas, 0, 0);
+    ctx.filter = 'none';
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = '#3050a0';
+    ctx.fillRect(0, 0, 960, 640);
+    ctx.restore();
+    // HUD overlay
+    ctx.fillStyle = 'rgba(0,0,30,0.5)';
+    ctx.fillRect(0, 0, 960, 40);
+    ctx.fillStyle = '#80d0ff'; ctx.textAlign = 'center'; ctx.font = 'bold 18px monospace';
+    ctx.fillText('灵魂状态  ·  找到灵魂医者点击复活', 480, 27);
+    // show arrow pointing to Spirit Healer if offscreen
+    if (game.spiritHealer) {
+      const sh = game.spiritHealer;
+      const sdx = (sh.x + sh.w/2) - Camera.x;
+      const sdy = (sh.y + sh.h/2) - Camera.y;
+      const d = Math.hypot((game.player.x + game.player.w/2) - (sh.x + sh.w/2),
+                           (game.player.y + game.player.h/2) - (sh.y + sh.h/2));
+      ctx.fillStyle = '#80d0ff'; ctx.font = '14px monospace';
+      ctx.fillText(`灵魂医者距离: ${Math.round(d / TILE)} 格`, 480, 630);
     }
   }
 
@@ -351,9 +418,19 @@
       drawCharSelect();
     } else if (game.state === STATE.PLAYING) {
       updatePlaying(dt);
-      drawPlaying();
-    } else if (game.state === STATE.DEAD) {
-      drawDead();
+      if (game.player.ghost) {
+        game.state = STATE.GHOST;
+      } else {
+        drawPlaying();
+      }
+    } else if (game.state === STATE.GHOST) {
+      updateGhost(dt);
+      if (!game.player.ghost) {
+        game.state = STATE.PLAYING;
+        drawPlaying();
+      } else {
+        drawGhost();
+      }
     } else if (game.state === STATE.WIN) {
       drawWin();
     }

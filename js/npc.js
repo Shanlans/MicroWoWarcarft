@@ -59,7 +59,51 @@ const NPC = (() => {
       shop: ['bread', 'water', 'potion', 'ironSword', 'oakStaff', 'shortBow', 'ironHelm', 'chainMail', 'ironLegs', 'silverRing', 'luckyCharm', 'arcaneStaff', 'longBow', 'steelBlade'],
       dialog: ['来自远方的珍品!'],
     },
+    spiritHealer: {
+      name: '灵魂医者',
+      color: '#80d0ff',
+      dialog: ['你的灵魂在此游荡……', '我可以帮你复活,但你会失去一些金币。'],
+      isSpirit: true,
+    },
   };
+
+  function createSpiritHealer(x, y) {
+    return {
+      id: 'spiritHealer', x, y, w: 40, h: 48,
+      def: DB.spiritHealer,
+      draw(ctx, cam) {
+        // ghostly blue glowing figure
+        const sx = Math.round(this.x - cam.x);
+        const sy = Math.round(this.y - cam.y);
+        const t = performance.now() / 1000;
+        const pulse = 0.6 + Math.sin(t * 3) * 0.2;
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        const img = Assets.get('npc');
+        // blue tint via composite
+        ctx.drawImage(img, sx, sy);
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = '#60b0ff';
+        ctx.fillRect(sx, sy, img.width, img.height);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.restore();
+        // name
+        ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#000';
+        ctx.fillText('灵魂医者', sx + this.w / 2 + 1, sy - 12);
+        ctx.fillStyle = '#80d0ff';
+        ctx.fillText('灵魂医者', sx + this.w / 2, sy - 13);
+        // pulsing glow circle
+        ctx.save();
+        ctx.globalAlpha = 0.15 + Math.sin(t * 2) * 0.1;
+        ctx.fillStyle = '#80d0ff';
+        ctx.beginPath();
+        ctx.arc(sx + this.w / 2, sy + this.h / 2, 36, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      },
+    };
+  }
 
   function create(id, x, y) {
     const def = DB[id];
@@ -93,5 +137,5 @@ const NPC = (() => {
     };
   }
 
-  return { DB, create };
+  return { DB, create, createSpiritHealer };
 })();
